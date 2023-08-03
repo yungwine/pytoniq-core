@@ -1,0 +1,13 @@
+from pytoniq_core.boc import begin_cell
+
+builder = begin_cell().store_uint(15, 32).store_address('EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG').store_ref(begin_cell().end_cell())
+
+print(builder)
+
+# 299[0000000F800DEB78CF30DC0C8612C3B3BE0086724D499B25CB2FBBB154C086C8B58417A2F040] -> {
+# 	0[]
+# }
+
+print([builder, builder])
+
+# [<Builder 299[0000000F800DEB78CF30DC0C8612C3B3BE0086724D499B25CB2FBBB154C086C8B58417A2F040] -> 1 refs>, <Builder 299[0000000F800DEB78CF30DC0C8612C3B3BE0086724D499B25CB2FBBB154C086C8B58417A2F040] -> 1 refs>]
