@@ -197,6 +197,7 @@ class TlSchemas:
             schema = self.get_by_id(data[i:i + 4], 'little')
             if not schema:  # is None
                 return data, len(data)
+            result['type'] = schema.name
                 # return {'bytes': data}, len(data)
             i += 4
             args = schema.args
@@ -204,7 +205,7 @@ class TlSchemas:
         for field, type_ in args.items():
             if '?' in type_:
                 index = int(type_[type_.find('.') + 1: type_.find('?')])
-                mask = bin(result.get('mode')).replace('0b', '')[::-1]
+                mask = bin(result.get('mode', result.get('flags'))).replace('0b', '')[::-1]
                 if index >= len(mask):
                     continue
                 if mask[index] == '0':
