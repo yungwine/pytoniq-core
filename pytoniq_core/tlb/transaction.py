@@ -667,6 +667,8 @@ class TransactionDescr(TlbScheme):
         tag += str(cell_slice.load_bit())
         if tag == '0000':
             return TransactionOrdinary.deserialize(cell_slice)
+        if tag == '0001':
+            return TransactionStorage.deserialize(cell_slice)
         if tag == '0100':
             return TransactionSplitPrepare.deserialize(cell_slice)
         if tag == '0101':
