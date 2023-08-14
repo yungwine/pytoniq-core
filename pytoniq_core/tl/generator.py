@@ -274,6 +274,7 @@ class TlSchemas:
                         sch = self.get_by_id(id)
                         i += 4
                     result[field], j = self.deserialize(data[i:], False, sch.args)
+                    result[field]['@type'] = sch.name
                     i += j
         return result, i
 

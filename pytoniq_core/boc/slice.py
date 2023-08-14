@@ -17,6 +17,14 @@ class Slice(NullCell):
         # super().__init__(bits, refs, type_)
         self.ref_offset = 0
 
+    @property
+    def remaining_bits(self):
+        return len(self.bits)
+
+    @property
+    def remaining_refs(self):
+        return len(self.refs) - self.ref_offset
+
     def is_special(self):
         from . import CellTypes
         return False if self.type_ == CellTypes.ordinary else True
@@ -129,6 +137,16 @@ class Slice(NullCell):
         if byte_length == 0:
             byte_length = len(self.bits) // 8
         return self.load_bytes(byte_length)
+
+    def load_snake_bytes(self) -> bytes:
+        assert not self.remaining_bits % 8, f'invalid string length: {self.remaining_bits}'
+        assert self.remaining_refs in (0, 1), f'invalid amount of refs: {self.remaining_refs}'
+        if not self.remaining_refs:
+            return self.load_bytes(self.remaining_bits // 8)
+        return self.load_bytes(self.remaining_bits // 8) + self.load_ref().begin_parse().load_snake_bytes()
+
+    def load_snake_string(self) -> str:
+        return self.load_snake_bytes().decode()
 
     def preload_ref(self) -> Cell:
         return self.refs[self.ref_offset]

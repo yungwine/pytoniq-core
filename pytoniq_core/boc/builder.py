@@ -45,6 +45,18 @@ class Builder(NullCell):
     def refs(self, new_refs: typing.List[Cell]):
         self._refs = new_refs
 
+    @property
+    def used_bits(self) -> int:
+        return len(self._bits)
+
+    @property
+    def available_bits(self) -> int:
+        return 1023 - self.used_bits
+
+    @property
+    def available_bytes(self) -> int:
+        return self.available_bits // 8
+
     def to_bytes(self):
         return self._bits.tobytes()
 
@@ -122,8 +134,21 @@ class Builder(NullCell):
         return self
 
     def store_string(self, value: str):
+        assert len(value.encode()) <= 127, f'string byte length is more than 127, use .store_snake_string()'
         self._bits.frombytes(value.encode())
         return self
+
+    def store_snake_bytes(self, value: bytes):
+        if len(value) == 0:
+            return self
+        i = self.available_bytes
+        return self.store_bytes(value[:i]).store_ref(Builder().store_snake_bytes(value[i:]).end_cell())
+
+    def store_snake_string(self, value: str, need_prefix: bool = False):
+        value = value.encode()
+        if need_prefix:
+            value = b'\x00' + value
+        return self.store_snake_bytes(value)
 
     def store_address(self, address):
         if address is None:
