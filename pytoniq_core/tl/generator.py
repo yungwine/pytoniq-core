@@ -149,12 +149,17 @@ class TlSchemas:
                     else:
                         pass  # TODO
         else:
-            schema = self.get_by_class_name(type_)
-            if schema:  # implicit
-                if len(schema) == 1:
-                    result += self.serialize(schema[0], value, boxed=True)
+            schemas = self.get_by_class_name(type_)
+            if schemas:  # implicit
+                if len(schemas) == 1:
+                    result += self.serialize(schemas[0], value, boxed=True)
                 else:
-                    result += value  # should be already in bytes, otherwise how do serializer know what scheme it should serialize?
+                    if isinstance(value, bytes):
+                        result += value  # can specify implicit scheme value already serialized
+                    elif isinstance(value, dict) and '@type' in value:
+                        result += self.serialize(schema=self.get_by_name(value['@type']), data=value, boxed=True)
+                    else:
+                        raise TlError(f'Unknown value provided for implicit schemes {schemas}: {value}')
             else:  # explicit
                 if type_.startswith('('):
                     subtype = type_.split()[1][:-1]
@@ -197,7 +202,7 @@ class TlSchemas:
             schema = self.get_by_id(data[i:i + 4], 'little')
             if not schema:  # is None
                 return data, len(data)
-            result['type'] = schema.name
+            result['@type'] = schema.name
                 # return {'bytes': data}, len(data)
             i += 4
             args = schema.args

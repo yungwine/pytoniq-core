@@ -3,7 +3,6 @@ from nacl.bindings import crypto_sign, crypto_sign_BYTES
 import nacl.encoding
 
 
-
 def verify_sign(public_key: bytes, signed_message: bytes, signature: bytes):
     key = VerifyKey(public_key)
     try:
