@@ -4,6 +4,7 @@ from .block import CurrencyCollection
 from .tlb import TlbScheme, TlbError
 from .account import AccountStatus, StateInit, StorageUsedShort
 from .utils import HashUpdate
+from .. import HashMap
 from ..boc import Slice, Builder, Cell
 from ..boc.address import Address
 
@@ -40,9 +41,11 @@ class Transaction(TlbScheme):
                  out_msgs: typing.List["MessageAny"],
                  total_fees: CurrencyCollection,
                  state_update: HashUpdate,
-                 description: "TransactionDescr"
+                 description: "TransactionDescr",
+                 cell: typing.Optional["Cell"] = None
                  ):
-        self.account_addr = account_addr.hex()
+        self.account_addr = account_addr
+        self.account_addr_hex = account_addr.hex()
         self.lt = lt
         self.prev_trans_hash = prev_trans_hash
         self.prev_trans_lt = prev_trans_lt
@@ -56,13 +59,46 @@ class Transaction(TlbScheme):
         self.state_update = state_update
         self.description: TransactionOrdinary = description
         # the type hinting above is wrong, but it was made for better experience in IDE cause most time you work with ordinary trs
+        self.cell = cell.copy()
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        in_msg_cell = Builder()
+        if self.in_msg:
+            in_msg_cell.store_maybe_ref(self.in_msg.serialize())
+        else:
+            in_msg_cell.store_bit_int(0)
+
+        def serializer(src, dest):
+            dest.store_ref(src.serialize())
+
+        out_msgs = {i: self.out_msgs[i] for i in range(len(self.out_msgs))}
+        out_msg_cell = Builder().store_dict(HashMap(key_size=15, map_=out_msgs, value_serializer=serializer).serialize()).end_cell()
+
+        builder = Builder()
+        builder\
+            .store_bits('0111')\
+            .store_bytes(self.account_addr)\
+            .store_uint(self.lt, 64)\
+            .store_bytes(self.prev_trans_hash)\
+            .store_uint(self.prev_trans_lt)\
+            .store_uint(self.now, 32)\
+            .store_uint(self.outmsg_cnt, 15)\
+            .store_cell(self.orig_status.serialize())\
+            .store_cell(self.end_status.serialize())\
+            .store_ref(
+                Builder()\
+                    .store_cell(in_msg_cell.end_cell())\
+                    .store_cell(out_msg_cell)\
+                    .end_cell()
+            )\
+            .store_cell(self.total_fees.serialize())\
+            .store_ref(self.state_update.serialize())\
+            .store_ref(self.description.serialize())
+            # TODO description serialization
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
+        cell = cell_slice.copy().to_cell()
         if cell_slice.is_special():
             return cell_slice.to_cell()
         tag = cell_slice.load_bits(4).to01()
@@ -83,11 +119,13 @@ class Transaction(TlbScheme):
         out_msgs = ref.load_dict(15, value_deserializer=lambda src: MessageAny.deserialize(src.load_ref().begin_parse()))
         if out_msgs is not None:
             out_msgs = [out_msgs[i] for i in sorted(out_msgs)]
+        else:
+            out_msgs = []
         total_fees = CurrencyCollection.deserialize(cell_slice)
         state_update = HashUpdate.deserialize(cell_slice.load_ref().begin_parse())
         description = TransactionDescr.deserialize(cell_slice.load_ref().begin_parse())
 
-        return cls(account_addr, lt, prev_trans_hash, prev_trans_lt, now, outmsg_cnt, orig_status, end_status, in_msg, out_msgs, total_fees, state_update, description)
+        return cls(account_addr, lt, prev_trans_hash, prev_trans_lt, now, outmsg_cnt, orig_status, end_status, in_msg, out_msgs, total_fees, state_update, description, cell=cell)
 
 
 """ ########## MESSAGES ########## """
@@ -707,8 +745,7 @@ class TransactionOrdinary(TlbScheme):
         self.bounce = bounce
         self.destroyed = destroyed
 
-    @classmethod
-    def serialize(cls, *args):
+    def serialize(self):
         pass
 
     @classmethod

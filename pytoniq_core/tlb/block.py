@@ -2,7 +2,7 @@ import typing
 
 from .tlb import TlbScheme, TlbError
 from .account import ShardAccount, AccountBlock
-from .utils import MerkleUpdate, deserialize_shard_hashes
+from .utils import MerkleUpdate, deserialize_shard_hashes, uint64_to_int64
 from ..boc import Slice, Cell, Builder
 from ..boc.dict.dict import HashMap
 
@@ -902,6 +902,7 @@ class ShardDescr(TlbScheme):
         self.flags = flags
         self.next_catchain_seqno = next_catchain_seqno
         self.next_validator_shard = next_validator_shard
+        self.next_validator_shard_signed = uint64_to_int64(self.next_validator_shard)
         self.min_ref_mc_seqno = min_ref_mc_seqno
         self.gen_utime = gen_utime
         self.split_merge_at = split_merge_at

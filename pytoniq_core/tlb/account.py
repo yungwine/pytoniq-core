@@ -321,9 +321,15 @@ class AccountStatus(TlbScheme):
     def __init__(self, type_: typing.Literal["uninitialized", "frozen", "active", "nonexist"]):
         self.type_ = type_
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        if self.type_ == 'uninitialized':
+            return Builder().store_uint(0, 2).end_cell()
+        if self.type_ == 'frozen':
+            return Builder().store_uint(1, 2).end_cell()
+        if self.type_ == 'active':
+            return Builder().store_uint(2, 2).end_cell()
+        if self.type_ == 'nonexist':
+            return Builder().store_uint(3, 2).end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):

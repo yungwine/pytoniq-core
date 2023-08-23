@@ -1,6 +1,7 @@
 import typing
 
 from .tlb import TlbScheme, TlbError
+from .. import Builder
 from ..boc import Slice, Cell, CellTypes
 
 
@@ -44,9 +45,12 @@ class HashUpdate(TlbScheme):
         self.old_hash = old_hash
         self.new_hash = new_hash
 
-    @classmethod
-    def serialize(cls, *args):
-        ...
+    def serialize(self):
+        return Builder()\
+                .store_bytes(b'\x72')\
+                .store_bytes(self.old_hash)\
+                .store_bytes(self.new_hash)\
+                .end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -67,3 +71,7 @@ def deserialize_shard_hashes(cell_slice: Slice):
             for i in range(len(shard_hashes[k].list)):
                 shard_hashes[k].list[i] = ShardDescr.deserialize(shard_hashes[k].list[i])
     return shard_hashes
+
+
+def uint64_to_int64(num: int):
+    return (num & ((1 << 63) - 1)) - (num & (1 << 63))
