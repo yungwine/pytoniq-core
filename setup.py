@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pytoniq-core",
-    version="0.1.4",
+    version="0.1.5",
     author="Maksim Kurbatov",
     author_email="cyrbatoff@gmail.com",
     description="TON Blockchain SDK",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=setuptools.find_packages('.', exclude=['tests', 'examples', 'pytoniq_core/tlb/generator.py']),
+    packages=setuptools.find_packages('.', exclude=['.idea', 'tests', 'examples', 'pytoniq_core/tlb/generator.py']),
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3.10",
