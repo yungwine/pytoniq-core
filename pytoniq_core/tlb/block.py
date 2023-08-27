@@ -93,8 +93,7 @@ class BlockInfo(TlbScheme):
         if self.vert_seqno_incr:
             self.prev_vert_ref = BlkPrevInfo.deserialize(cell_slice.load_ref().begin_parse(), 0)
 
-    @classmethod
-    def serialize(cls, *args): ...
+    def serialize(self, *args): ...
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -111,20 +110,31 @@ class ShardIdent(TlbScheme):
     shard_ident$00 shard_pfx_bits:(#<= 60) workchain_id:int32 shard_prefix:uint64 = ShardIdent;
     """
 
-    def __init__(self, cell_slice: Slice):
-        self.shard_pfx_bits = cell_slice.load_uint(int(60).bit_length())
-        self.workchain_id = cell_slice.load_int(32)
-        self.shard_prefix = cell_slice.load_uint(64)
+    def __init__(self, shard_pfx_bits: int, workchain_id: int, shard_prefix: int):
+        self.shard_pfx_bits = shard_pfx_bits
+        self.workchain_id = workchain_id
+        self.shard_prefix = shard_prefix
 
-    @classmethod
-    def serialize(cls, *args): ...
+    def serialize(self, *args): ...
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         tag = cell_slice.load_bits(2).to01()
         if tag != '00':
             raise BlockError(f'ShardIdent deserialization error: unknown prefix: {tag}')
-        return cls(cell_slice)
+        return cls(shard_pfx_bits=cell_slice.load_uint(int(60).bit_length()), workchain_id=cell_slice.load_int(32), shard_prefix=cell_slice.load_uint(64))
+
+    def calculate_shard(self) -> int:
+        """
+        :return: shard as unsigned integer
+        """
+        return self.shard_prefix | 1 << (63 - self.shard_pfx_bits)
+
+    def calculate_shard_signed(self) -> int:
+        """
+        :return: shard as signed integer
+        """
+        return uint64_to_int64(self.calculate_shard())
 
 
 class GlobalVersion(TlbScheme):
@@ -171,11 +181,13 @@ class BlkPrevInfo(TlbScheme):
 
     def __init__(self, type_: str, **kwargs):
         self.type_ = type_
+        self.prev: ExtBlkRef
+        self.prev1: ExtBlkRef
+        self.prev2: ExtBlkRef
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    @classmethod
-    def serialize(cls, *args): ...
+    def serialize(self, *args): ...
 
     @classmethod
     def deserialize(cls, cell_slice: Slice, after_merge: int):
@@ -193,8 +205,7 @@ class BlkPrevInfo(TlbScheme):
 
 class ExtBlkRef(TlbScheme):
     """
-    ext_blk_ref$_ end_lt:uint64
-    seq_no:uint32 root_hash:bits256 file_hash:bits256 = ExtBlkRef;
+    ext_blk_ref$_ end_lt:uint64 seq_no:uint32 root_hash:bits256 file_hash:bits256 = ExtBlkRef;
     """
 
     def __init__(self, cell_slice: Slice):

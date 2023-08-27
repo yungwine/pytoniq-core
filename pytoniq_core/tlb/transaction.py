@@ -143,6 +143,18 @@ class MessageAny(TlbScheme):
         self.init = init
         self.body = body
 
+    @property
+    def is_external(self):
+        return isinstance(self.info, ExternalMsgInfo)
+
+    @property
+    def is_internal(self):
+        return isinstance(self.info, InternalMsgInfo)
+
+    @property
+    def is_external_out(self):
+        return isinstance(self.info, ExternalOutMsgInfo)
+
     def serialize(self) -> Cell:
         builder = Builder().store_cell(self.info.serialize())
         if self.init:
