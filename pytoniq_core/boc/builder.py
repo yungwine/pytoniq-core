@@ -1,6 +1,5 @@
 import copy
 import math
-import timeit
 
 # from bitarray import bitarray
 from bitarray.util import int2ba

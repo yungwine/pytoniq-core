@@ -159,11 +159,20 @@ class MessageAny(TlbScheme):
         builder = Builder().store_cell(self.info.serialize())
         if self.init:
             builder.store_bit(1)  # maybe true
-            builder.store_bit(1)  # Either right
-            builder.store_ref(self.init.serialize())
+            if len(self.init.serialize().bits) <= builder.available_bits:
+                builder.store_bit(0)  # Either left
+                builder.store_cell(self.init.serialize())
+            else:
+                builder.store_bit(1)  # Either right
+                builder.store_ref(self.init.serialize())
         else:
             builder.store_bit(0)  # maybe false
-        builder.store_maybe_ref(self.body)  # Either right
+        if len(self.body.bits) <= builder.available_bits:
+            builder.store_bit(0)  # Either left
+            builder.store_cell(self.body)
+        else:
+            builder.store_bit(1)  # Either right
+            builder.store_ref(self.body)
         return builder.end_cell()
 
     @classmethod
