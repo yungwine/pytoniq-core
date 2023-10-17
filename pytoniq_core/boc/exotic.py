@@ -34,7 +34,7 @@ class LevelMask:
         return self._m.bit_length()
 
     def get_hash_index(self):
-        return self._m.bit_count()
+        return bin(self._m).count("1")
 
     def apply(self, level: int):
         return LevelMask(self._m & ((1 << level) - 1))
