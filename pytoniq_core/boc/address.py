@@ -118,5 +118,8 @@ class Address:
     # def __str__(self):
     #     return self.to_str()
 
+    def __eq__(self, other: "Address"):
+        return self.wc == other.wc and self.hash_part == other.hash_part
+
     def __repr__(self):
         return f'Address<{self.to_str()}>'

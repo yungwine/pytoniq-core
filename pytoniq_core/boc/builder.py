@@ -8,6 +8,7 @@ import typing
 
 from .address import Address
 from .cell import Cell
+from .slice import Slice
 from .deserialize import NullCell, Boc
 from .tvm_bitarray import TvmBitarray
 
@@ -64,7 +65,7 @@ class Builder(NullCell):
         self._refs += cell.refs
         return self
 
-    def store_slice(self, cell_slice: "Slice"):
+    def store_slice(self, cell_slice: Slice):
         self.store_bits(cell_slice.bits)
         for i in range(cell_slice.ref_offset, len(cell_slice.refs)):
             self.store_ref(cell_slice.refs[i])

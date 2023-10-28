@@ -4,6 +4,7 @@ from .tlb import TlbScheme, TlbError
 from ..boc.slice import Slice
 from ..boc.builder import Builder
 from ..boc.cell import Cell
+from ..boc.dict import HashMap
 
 
 class VmError(TlbError):
@@ -102,11 +103,6 @@ class VmStackValue(TlbScheme):
         if tag == '000000100000000':  # #0201_
             cell_slice.load_bits(15)
             return cell_slice.load_int(257)
-            # actually the code below is more convenient (for keys for e.g.) but may work incorrectly for a big positive integer
-            if cell_slice.preload_bit():
-                return cell_slice.load_int(257)
-            cell_slice.load_bit()
-            return cell_slice.load_bytes(32)
 
         tag = cell_slice.preload_bytes(2)
         if tag[:1] == b'\x00':

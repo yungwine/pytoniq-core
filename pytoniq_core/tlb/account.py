@@ -179,9 +179,10 @@ class AccountStorage(TlbScheme):
     = AccountStorage;
     """
 
-    def __init__(self, last_trans_lt: int, balance: "CurrencyCollection", state: "AccountState"):
+    def __init__(self, last_trans_lt: int, balance, state: "AccountState"):
+        from .transaction import CurrencyCollection
         self.last_trans_lt = last_trans_lt
-        self.balance = balance
+        self.balance: CurrencyCollection = balance
         self.state = state
 
     @classmethod
