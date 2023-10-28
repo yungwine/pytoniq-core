@@ -4,7 +4,7 @@ from bitarray.util import ba2int
 
 from .deserialize import Boc, NullCell
 from .cell import Cell
-from .tvm_bitarray import bitarray, TvmBitarray, BitarrayLike
+from .tvm_bitarray import TvmBitarray, BitarrayLike
 from .address import Address
 
 
@@ -84,12 +84,12 @@ class Slice(NullCell):
 
     def preload_address(self) -> typing.Optional[Address]:
         # address := flags 2bits, anycast 1bit, workchain 8bits, hash_part 256bits = 267 bits
-        if self.preload_uint(2) == 0:
+        rem = self.preload_bits(267)
+        if rem[:2].to01() == '00':
             return None
-        rem = self.preload_bits(265)  # 267 - 2
 
-        wc = ba2int(rem[1:9], signed=True)
-        hash_part = rem[9:].tobytes()
+        wc = ba2int(rem[3:11], signed=True)
+        hash_part = rem[11:].tobytes()
 
         return Address((wc, hash_part))
 
