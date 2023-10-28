@@ -15,7 +15,7 @@ Key = typing.Union[int, str, bytes, Address]
 Value = typing.Union
 
 
-class DictError(BaseException):
+class DictError(Exception):
     pass
 
 

@@ -162,4 +162,4 @@ cython_debug/
 /pytoniq_core.egg-info/
 /build/
 /dist/
-/tests/
+/feats/

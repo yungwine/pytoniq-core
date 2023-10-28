@@ -12,7 +12,7 @@ from ..boc.cell import Cell
 from ..boc.address import Address
 
 
-class ProofError(BaseException):
+class ProofError(Exception):
     pass
 
 

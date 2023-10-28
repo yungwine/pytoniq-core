@@ -4,6 +4,7 @@ from .builder import Builder
 from .exotic import CellTypes
 from .dict import *
 from .address import Address, AddressError
+from .tvm_bitarray import TvmBitarray
 
 
 def begin_cell():

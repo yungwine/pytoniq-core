@@ -84,9 +84,10 @@ class Slice(NullCell):
 
     def preload_address(self) -> typing.Optional[Address]:
         # address := flags 2bits, anycast 1bit, workchain 8bits, hash_part 256bits = 267 bits
-        rem = self.preload_bits(267)
-        if rem[:2].to01() == '00':
+        rem = self.preload_bits(2)
+        if rem.to01() == '00':
             return None
+        rem = self.preload_bits(267)
 
         wc = ba2int(rem[3:11], signed=True)
         hash_part = rem[11:].tobytes()
@@ -106,14 +107,27 @@ class Slice(NullCell):
         length = self.preload_uint(bit_length)
         if not length:
             return 0
-        coins = self.preload_bits(bit_length + length * 8)[bit_length:]
-        return ba2int(coins, signed=False)
+        num = self.preload_bits(bit_length + length * 8)[bit_length:]
+        return ba2int(num, signed=False)
 
     def load_var_uint(self, bit_length: int) -> typing.Optional[int]:
         length = self.load_uint(bit_length)
         if not length:
             return None
         return self.load_uint(length * 8)
+
+    def preload_var_int(self, bit_length: int) -> int:
+        length = self.preload_int(bit_length)
+        if not length:
+            return 0
+        num = self.preload_bits(bit_length + length * 8)[bit_length:]
+        return ba2int(num, signed=True)
+
+    def load_var_int(self, bit_length: int) -> typing.Optional[int]:
+        length = self.load_int(bit_length)
+        if not length:
+            return None
+        return self.load_int(length * 8)
 
     def preload_coins(self) -> int:
         length = self.preload_uint(4)

@@ -57,6 +57,10 @@ class Builder(NullCell):
     def available_bytes(self) -> int:
         return self.available_bits // 8
 
+    @property
+    def available_refs(self) -> int:
+        return 4 - len(self.refs)
+
     def to_bytes(self):
         return self._bits.tobytes()
 

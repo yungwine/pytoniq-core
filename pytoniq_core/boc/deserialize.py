@@ -10,7 +10,7 @@ from .utils import bytes_to_uint
 from ..crypto.crc import crc32c
 
 
-class BocError(BaseException):
+class BocError(Exception):
     pass
 
 

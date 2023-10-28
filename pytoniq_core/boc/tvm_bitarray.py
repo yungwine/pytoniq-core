@@ -7,11 +7,15 @@ from bitarray.util import int2ba
 BytesLike = Union[bytes, Iterable[int]]
 
 
-class TvmBitarrayException(BaseException):
+class TvmBitarrayException(Exception):
     pass
 
 
 class TvmBitarrayOverflowException(TvmBitarrayException):
+    pass
+
+
+class TvmBitarrayUnderflowException(TvmBitarrayException):
     pass
 
 
@@ -32,7 +36,7 @@ class TvmBitarray(bitarray):
 
     def check_underflow(self, length: int) -> None:
         if len(self) < length:
-            raise TvmBitarrayOverflowException('bitstring underflow')
+            raise TvmBitarrayUnderflowException('bitstring underflow')
 
     def extend(self, x: Union[str, Iterable[int]]) -> None:
         self.check_overflow(len(x))

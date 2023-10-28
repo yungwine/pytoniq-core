@@ -8,7 +8,7 @@ import os
 logger = logging.getLogger(name='TL')
 
 
-class TlError(BaseException):
+class TlError(Exception):
     pass
 
 

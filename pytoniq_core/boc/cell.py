@@ -11,7 +11,7 @@ from .utils import bytes_to_uint
 from ..crypto.crc import crc32c
 
 
-class CellError(BaseException):
+class CellError(Exception):
     pass
 
 

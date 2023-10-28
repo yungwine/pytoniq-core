@@ -7,7 +7,7 @@ def is_builtin_class_instance(obj):
     return obj.__class__.__module__ == '__builtins__'
 
 
-class TlbError(BaseException):
+class TlbError(Exception):
     pass
 
 

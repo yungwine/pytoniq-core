@@ -5,7 +5,7 @@ from ..crypto.crc import crc16
 from .cell import Cell
 
 
-class AddressError(BaseException):
+class AddressError(Exception):
     pass
 
 
