@@ -248,6 +248,8 @@ class TlSchemas:
                                 if field not in result:
                                     result[field] = [temp]
                                 temp, jj = self.deserialize(data[i + j:i + byte_len])
+                                if jj == 0:
+                                    break
                                 result[field].append(temp)
                                 j  += jj
                         else:
