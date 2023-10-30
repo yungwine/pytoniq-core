@@ -146,8 +146,9 @@ class TlSchemas:
                         if len(temp) % 4:
                             temp += (4 - len(temp) % 4) * b'\x00'
                         result += temp
-                    else:
-                        pass  # TODO
+                    elif isinstance(value, dict) and '@type' in value:
+                        result += self.serialize(schema=self.get_by_name(value['@type']), data=value, boxed=True)
+
         else:
             schemas = self.get_by_class_name(type_)
             if schemas:  # implicit
@@ -241,7 +242,16 @@ class TlSchemas:
                             attach_len = 1
                             byte_len = int.from_bytes(data[i:i+1], 'little')
                             i += 1
-                        result[field], _ = self.deserialize(data[i:i+byte_len])
+                        temp, j = self.deserialize(data[i:i+byte_len])
+                        if j < byte_len:
+                            while j < byte_len:
+                                if field not in result:
+                                    result[field] = [temp]
+                                temp, jj = self.deserialize(data[i + j:i + byte_len])
+                                result[field].append(temp)
+                                j  += jj
+                        else:
+                            result[field] = temp
                         i += byte_len
                         if (byte_len + attach_len) % 4:
                             i += 4 - (byte_len + attach_len) % 4
@@ -252,8 +262,6 @@ class TlSchemas:
                 if type_.startswith('('):
                     subtype = type_.split()[1][:-1]
                     sch = self.get_by_name(subtype)
-
-                    # result[field], j = self.deserialize(data[i:], False, sch.args)
                     if 'vector' in type_:
                         length = int.from_bytes(data[i:i + 4], 'little', signed=False)
                         i += 4
