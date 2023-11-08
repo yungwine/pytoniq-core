@@ -249,9 +249,10 @@ class TlSchemas:
                                     result[field] = [temp]
                                 temp, jj = self.deserialize(data[i + j:i + byte_len])
                                 if jj == 0:
+                                    result[field] = data[i:i+byte_len]
                                     break
                                 result[field].append(temp)
-                                j  += jj
+                                j += jj
                         else:
                             result[field] = temp
                         i += byte_len
