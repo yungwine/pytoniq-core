@@ -80,7 +80,7 @@ class Transaction(TlbScheme):
             .store_bytes(self.account_addr)\
             .store_uint(self.lt, 64)\
             .store_bytes(self.prev_trans_hash)\
-            .store_uint(self.prev_trans_lt)\
+            .store_uint(self.prev_trans_lt, 64)\
             .store_uint(self.now, 32)\
             .store_uint(self.outmsg_cnt, 15)\
             .store_cell(self.orig_status.serialize())\
