@@ -73,12 +73,24 @@ class TlSchemas:
         'vector': None,
     }
 
-    def __init__(self, schemas: typing.List[TlSchema]):
+    def __init__(self, schemas: typing.List[TlSchema], auto_deserialize: bool = True):
+        """
+        :param schemas: TL Schemes
+        :param auto_deserialize: if true will try to deserialize bytes fields with known TL schemes but skip it for schemes that are "untouchables"
+        """
         self.list: list = schemas
+
         self.id_map: typing.Dict[bytes, TlSchema] = {}
         self.name_map: typing.Dict[str, TlSchema] = {}
         self.class_name_map: typing.Dict[str, typing.List[TlSchema]] = {}
         self.generate_map()
+
+        self._auto_deserialize = auto_deserialize
+
+        self.untouchables: typing.Dict[str, set] = {}  # {schema_name: {field1, field2}}
+        self.set_default_untouchables()
+        #  schemas and their fields not to auto deserialize. In ADNL some schemes (like adnl.message.part or rldp ones)
+        #  are not supposed to be auto deserialized, because it may cause some errors.
 
     def get_by_id(self, tl_id: typing.Union[bytes, int], byteorder: typing.Literal['little', 'big'] = 'big') -> TlSchema:
         """
@@ -115,6 +127,9 @@ class TlSchemas:
             self.id_map[schema.id] = schema
             self.name_map[schema.name] = schema
             self.class_name_map[schema.class_name] = self.class_name_map.get(schema.class_name, []) + [schema]
+
+    def set_default_untouchables(self):
+        self.untouchables['adnl.message.part'] = {'data'}
 
     def serialize_field(self, type_: str, value):
         logger.log(level=5, msg=f'serializing {type_} with value {value}')
@@ -199,6 +214,7 @@ class TlSchemas:
     def deserialize(self, data: bytes, boxed: bool = True, args=None) -> typing.Tuple[typing.Union[dict, bytes], int]:
         i = 0
         result = {}
+        schema = None
         if boxed:
             schema = self.get_by_id(data[i:i + 4], 'little')
             if not schema:  # is None
@@ -242,19 +258,25 @@ class TlSchemas:
                             attach_len = 1
                             byte_len = int.from_bytes(data[i:i+1], 'little')
                             i += 1
-                        temp, j = self.deserialize(data[i:i+byte_len])
-                        if j < byte_len:
-                            while j < byte_len:
-                                if field not in result:
-                                    result[field] = [temp]
-                                temp, jj = self.deserialize(data[i + j:i + byte_len])
-                                if jj == 0:
-                                    result[field] = data[i:i+byte_len]
-                                    break
-                                result[field].append(temp)
-                                j += jj
+                        if ((not self._auto_deserialize) or
+                                (schema is not None and
+                                 schema.name in self.untouchables
+                                 and field in self.untouchables[schema.name])):
+                            result[field] = data[i:i + byte_len]
                         else:
-                            result[field] = temp
+                            temp, j = self.deserialize(data[i:i+byte_len])
+                            if j < byte_len:
+                                while j < byte_len:
+                                    if field not in result:
+                                        result[field] = [temp]
+                                    temp, jj = self.deserialize(data[i + j:i + byte_len])
+                                    j += jj
+                                    if jj == 0:
+                                        result[field] = data[i:i+byte_len]
+                                        break
+                                    result[field].append(temp)
+                            else:
+                                result[field] = temp
                         i += byte_len
                         if (byte_len + attach_len) % 4:
                             i += 4 - (byte_len + attach_len) % 4
@@ -279,13 +301,12 @@ class TlSchemas:
                             i += j
                 else:
                     sch = self.get_by_name(type_)
-                    if not sch:
-                        # sch = self.get_by_class_name(type_)
-                        id = data[i:i + 4][::-1]
-                        sch = self.get_by_id(id)
-                        i += 4
-                    result[field], j = self.deserialize(data[i:], False, sch.args)
-                    result[field]['@type'] = sch.name
+                    if sch:
+                        result[field], j = self.deserialize(data[i:], False, sch.args)
+                        result[field]['@type'] = sch.name
+                    else:
+                        result[field], j = self.deserialize(data[i:], True)
+                    # result[field], j = self.deserialize(data[i:], False, sch.args)
                     i += j
         return result, i
 
