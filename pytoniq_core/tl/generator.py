@@ -150,6 +150,8 @@ class TlSchemas:
                     result += bytes.fromhex(value)
             else:
                 if type_ == 'bytes':
+                    if isinstance(value, dict) and '@type' in value:
+                        value = self.serialize(schema=self.get_by_name(value['@type']), data=value, boxed=True)
                     if isinstance(value, bytes):
                         temp = b''
                         bytes_len = len(value)
@@ -161,9 +163,6 @@ class TlSchemas:
                         if len(temp) % 4:
                             temp += (4 - len(temp) % 4) * b'\x00'
                         result += temp
-                    elif isinstance(value, dict) and '@type' in value:
-                        result += self.serialize(schema=self.get_by_name(value['@type']), data=value, boxed=True)
-
         else:
             schemas = self.get_by_class_name(type_)
             if schemas:  # implicit
