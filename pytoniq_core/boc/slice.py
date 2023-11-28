@@ -1,5 +1,4 @@
 import typing
-from copy import deepcopy
 from bitarray.util import ba2int
 
 from .deserialize import Boc, NullCell
@@ -11,7 +10,7 @@ from .address import Address
 class Slice(NullCell):
 
     def __init__(self, bits: TvmBitarray, refs: typing.List[Cell], type_: int = -1):
-        self.bits = bits.copy()
+        self.bits = bits
         self.refs = refs
         self.type_ = type_
         # super().__init__(bits, refs, type_)
@@ -231,7 +230,7 @@ class Slice(NullCell):
         return cells[0].begin_parse()
 
     def copy(self):
-        return Slice(self.bits.copy(), deepcopy(self.refs), self.type_)
+        return Slice(self.bits.copy(), self.refs.copy(), self.type_)
 
     def __repr__(self) -> str:
         return f'<Slice {len(self.bits)}[{self.bits.tobytes().hex().upper()}] -> {len(self.refs) - self.ref_offset} refs>'

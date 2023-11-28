@@ -1,13 +1,9 @@
-import copy
 import hashlib
 import typing
 
-from bitarray.util import ba2int
-
 from .deserialize import Boc, NullCell
 from .exotic import LevelMask, CellTypes
-from .tvm_bitarray import TvmBitarray, bitarray, BitarrayLike
-from .utils import bytes_to_uint
+from .tvm_bitarray import TvmBitarray, BitarrayLike
 from ..crypto.crc import crc32c
 
 
@@ -272,11 +268,10 @@ class Cell(NullCell):
 
     def begin_parse(self):
         from .slice import Slice
-        return Slice(self.bits, self.refs.copy(), self.type_)
+        return Slice(self.bits.copy(), self.refs.copy(), self.type_)
 
     def copy(self):
-        #  TODO deepcopy?
-        return Cell(self.bits.copy(), copy.deepcopy(self.refs), self.type_)
+        return Cell(self.bits.copy(), self.refs.copy(), self.type_)
 
     def to_tonsdk_cell(self, cell_cls):
         return cell_cls.one_from_boc(self.to_boc())

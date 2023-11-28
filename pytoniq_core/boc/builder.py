@@ -1,4 +1,3 @@
-import copy
 import math
 
 # from bitarray import bitarray
@@ -77,7 +76,7 @@ class Builder(NullCell):
 
     def store_ref(self, ref: Cell):
         assert len(self._refs) <= 4, 'builder refs overflow'
-        self._refs.append(copy.deepcopy(ref))
+        self._refs.append(ref)
         return self
 
     def store_bool(self, value: bool):

@@ -163,3 +163,4 @@ cython_debug/
 /build/
 /dist/
 /feats/
+/pytoniq_core/tvm/
