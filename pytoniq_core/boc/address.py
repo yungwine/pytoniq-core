@@ -123,3 +123,6 @@ class Address:
 
     def __repr__(self):
         return f'Address<{self.to_str()}>'
+    
+    def __hash__(self):
+        return int.from_bytes(self.hash_part, "big")
