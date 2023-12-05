@@ -76,12 +76,11 @@ def check_shard_proof(shard_proof: bytes, blk: BlockIdExt, shrd_blk: BlockIdExt)
     # shard_dict looks like this:
     # {0: {'list': [{'seq_no': 36667578, 'reg_mc_seqno': 30985767, 'start_lt': 39143950000000, 'end_lt': 39143950000004, 'root_hash': b'\x83f\xe4P\x05\xf3\xbe\x83\xaf\x00\xf9\xbf\xde\x01\x9e=fF%\xd4\xed&\xb9\x0b\xd4\n\xb1]K\xedd9', 'file_hash': b"n\xdd\xdb\xc8\xb01\xbe\xcf\xf7\xed\xb0'3\x9b\t\xe7\xd7J\xac/\x14W!y\x82o\xf6\x19\xeb\xeaj\xae", 'before_split': False, 'before_merge': False, 'want_split': False, 'want_merge': True, 'nx_cc_updated': False, 'flags': 0, 'next_catchain_seqno': 456373, 'next_validator_shard': 9223372036854775808, 'min_ref_mc_seqno': 30985764, 'gen_utime': 1688896742, 'split_merge_at': None, 'fees_collected': {'grams': 1006293421, 'other': {'dict': None}}, 'funds_created': {'grams': 1000000000, 'other': {'dict': None}}}]}}
 
-    shard_descr = shard_descr.list[0]  # see BinTree TLB schema
+    for s in shard_descr.list:
+        if s is not None and s.root_hash == shrd_blk.root_hash:
+            return shard_descr
 
-    if shard_descr.root_hash != shrd_blk.root_hash:
-        raise ProofError('shard block actual and expected hashes mismatch')
-
-    return shard_descr
+    raise ProofError('Could not find shard')
 
 
 def check_account_proof(proof: bytes, shrd_blk: BlockIdExt, address: "Address", account_state_root: "Cell", return_account_descr: bool = False):

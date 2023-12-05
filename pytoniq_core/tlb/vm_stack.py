@@ -4,7 +4,7 @@ from .tlb import TlbScheme, TlbError
 from ..boc.slice import Slice
 from ..boc.builder import Builder
 from ..boc.cell import Cell
-from ..boc.dict import HashMap
+from ..boc.hashmap import HashMap
 
 
 class VmError(TlbError):

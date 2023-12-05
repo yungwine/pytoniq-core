@@ -4,7 +4,7 @@ from .tlb import TlbScheme, TlbError
 from .account import ShardAccount, AccountBlock
 from .utils import MerkleUpdate, deserialize_shard_hashes, uint64_to_int64
 from ..boc import Slice, Cell, Builder
-from ..boc.dict.dict import HashMap
+from ..boc.hashmap.hashmap import HashMap
 
 
 # TODO provide in each constructor already deserialized args, not slice
@@ -860,6 +860,8 @@ class BinTree(TlbScheme):
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
+        if cell_slice.is_special():
+            return cls([cell_slice])
         if cell_slice.load_bit():
             return cls(cls.deserialize(cell_slice.load_ref().begin_parse()).list + cls.deserialize(cell_slice.load_ref().begin_parse()).list)
         else:

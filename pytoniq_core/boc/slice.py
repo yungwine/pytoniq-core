@@ -185,12 +185,12 @@ class Slice(NullCell):
 
     def load_hashmap(self, key_length: int, key_deserializer: typing.Callable = None,
                      value_deserializer: typing.Callable = None):
-        from .dict.dict import HashMap
+        from .hashmap.hashmap import HashMap
         return HashMap.parse(self, key_length, key_deserializer, value_deserializer)
 
     def load_hashmap_aug(self, key_length: int, x_deserializer: typing.Callable = None,
                          y_deserializer: typing.Callable = None):
-        from .dict.parse import parse_hashmap_aug
+        from .hashmap.parse import parse_hashmap_aug
         return parse_hashmap_aug(self, key_length, x_deserializer, y_deserializer)
 
     def load_hashmap_aug_e(self, key_length: int, x_deserializer: typing.Callable = None,
@@ -198,14 +198,14 @@ class Slice(NullCell):
         if self.is_special():
             return self.to_cell()
         if self.load_bit():
-            from .dict.parse import parse_hashmap_aug
+            from .hashmap.parse import parse_hashmap_aug
             return parse_hashmap_aug(self.load_ref().begin_parse(), key_length, x_deserializer, y_deserializer)
         else:
             return {}, [self]  # extra
 
     def preload_dict(self, key_length: int, key_deserializer: typing.Callable = None,
                      value_deserializer: typing.Callable = None):
-        from .dict.dict import HashMap
+        from .hashmap.hashmap import HashMap
         if self.preload_bit():
             return HashMap.parse(self.preload_ref().begin_parse(), key_length, key_deserializer, value_deserializer)
         else:
@@ -213,7 +213,7 @@ class Slice(NullCell):
 
     def load_dict(self, key_length: int, key_deserializer: typing.Callable = None,
                   value_deserializer: typing.Callable = None):
-        from .dict.dict import HashMap
+        from .hashmap.hashmap import HashMap
         if self.load_bit():
             return HashMap.parse(self.load_ref().begin_parse(), key_length, key_deserializer, value_deserializer)
         else:

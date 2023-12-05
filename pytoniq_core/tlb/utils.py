@@ -69,7 +69,10 @@ def deserialize_shard_hashes(cell_slice: Slice):
     if shard_hashes:
         for k in shard_hashes:
             for i in range(len(shard_hashes[k].list)):
-                shard_hashes[k].list[i] = ShardDescr.deserialize(shard_hashes[k].list[i])
+                if not shard_hashes[k].list[i].is_special():
+                    shard_hashes[k].list[i] = ShardDescr.deserialize(shard_hashes[k].list[i])
+                else:
+                    shard_hashes[k].list[i] = None
     return shard_hashes
 
 
