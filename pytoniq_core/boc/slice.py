@@ -25,7 +25,7 @@ class Slice(NullCell):
         return len(self.refs) - self.ref_offset
 
     def is_special(self):
-        from . import CellTypes
+        from .exotic import CellTypes
         return False if self.type_ == CellTypes.ordinary else True
 
     def preload_bit(self) -> int:
@@ -219,9 +219,19 @@ class Slice(NullCell):
         else:
             return None
 
+    def to_cell(self):
+        from .cell import Cell
+        return Cell(self.bits.copy(), self.refs[self.ref_offset:], self.type_)
+
+    def to_builder(self):
+        if self.is_special():
+            raise Exception('cant convert exotic slice to builder')
+        from .builder import Builder
+        return Builder().store_slice(self)
+
     @classmethod
     def from_cell(cls, cell: "Cell"):
-        return cls(cell.bits, cell.refs, cell.type_)
+        return cls(cell.bits.copy(), cell.refs.copy(), cell.type_)
 
     @classmethod
     def one_from_boc(cls, data: typing.Any) -> "Slice":

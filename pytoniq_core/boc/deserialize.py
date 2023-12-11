@@ -1,6 +1,6 @@
 import base64
 import binascii
-import copy
+from abc import abstractmethod
 import typing
 
 from bitarray.util import ba2int
@@ -30,32 +30,30 @@ class NullCell:
         self.refs = refs
         self.type_ = type_
 
-    def get_refs(self, cls: type):
-        refs = []
-        for ref in self.refs:
-            refs.append(cls(ref.bits, ref.get_refs(cls), ref.type_))
-
-        return refs
-
     def to_cell(self):
         from .cell import Cell
-        return Cell(self.bits, self.get_refs(Cell), self.type_)
+        if isinstance(self, Cell):
+            raise Exception('Cant convert Cell to Cell. Maybe you need .copy()?')
+        raise NotImplementedError
 
     def to_slice(self):
         from .slice import Slice
-        from .cell import Cell
-        return Slice(self.bits, self.get_refs(Cell), )
+        if isinstance(self, Slice):
+            raise Exception('Cant convert Slice to Slice. Maybe you need .copy()?')
+        raise NotImplementedError
 
     def to_builder(self):
         from .builder import Builder
-        cell = self.to_cell()
-        return Builder().store_cell(cell)
+        if isinstance(self, Builder):
+            raise Exception('Cant convert Builder to Builder. Maybe you need .copy()?')
+        raise NotImplementedError
 
+    @abstractmethod
     def copy(self):
-        return NullCell(self.bits.copy(), copy.deepcopy(self.refs.copy()), self.type_)
+        ...
 
     def __repr__(self) -> str:
-        return f'<NullCell {len(self.bits)}[{self.bits.tobytes().hex().upper()}] -> {len(self.refs)} refs>'
+        return f'<{self.__class__.__name__} {len(self.bits)}[{self.bits.tobytes().hex().upper()}] -> {len(self.refs)} refs>'
 
     def __str__(self, t=1, comma=False) -> str:
         """

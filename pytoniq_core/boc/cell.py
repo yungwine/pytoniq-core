@@ -62,8 +62,13 @@ class Cell(NullCell):
             raise CellError(f'Unknown cell type: {self.type_}')
 
     def to_builder(self):
+        if self.is_exotic:
+            raise CellError('cant convert exotic cell to builder')
         from .builder import Builder
         return Builder().store_cell(self)
+
+    def to_slice(self):
+        return self.begin_parse()
 
     def get_refs_descriptor(self, lvl_mask: LevelMask) -> bytes:
         # d1 = r + 8s + 32l

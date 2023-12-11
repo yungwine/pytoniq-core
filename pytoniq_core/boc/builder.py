@@ -64,18 +64,23 @@ class Builder(NullCell):
         return self._bits.tobytes()
 
     def store_cell(self, cell: Cell):
+        if len(self.refs) + len(cell.refs) > 4:
+            raise Exception('builder refs overflow')
         self.store_bits(cell.bits)
         self._refs += cell.refs
         return self
 
     def store_slice(self, cell_slice: Slice):
+        if len(self.refs) + len(cell_slice.refs) > 4:
+            raise Exception('builder refs overflow')
         self.store_bits(cell_slice.bits)
         for i in range(cell_slice.ref_offset, len(cell_slice.refs)):
             self.store_ref(cell_slice.refs[i])
         return self
 
     def store_ref(self, ref: Cell):
-        assert len(self._refs) <= 4, 'builder refs overflow'
+        if len(self.refs) >= 4:
+            raise Exception('builder refs overflow')
         self._refs.append(ref)
         return self
 
@@ -168,7 +173,13 @@ class Builder(NullCell):
         return self.store_maybe_ref(dict_)
 
     def end_cell(self) -> Cell:
-        return Cell(self._bits, self._refs, self.type_)
+        return Cell(self._bits.copy(), self._refs.copy(), self.type_)
+
+    def to_cell(self):
+        return self.end_cell()
+
+    def to_slice(self):
+        return Slice(self._bits.copy(), self._refs.copy(), self.type_)
 
     @classmethod
     def from_boc(cls, data: typing.Any) -> typing.List["Cell"]:

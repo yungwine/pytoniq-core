@@ -29,6 +29,12 @@ def test_copy():
     assert cell == cell_copy
     assert cs.remaining_bits == 0
 
+    cb = cell.to_builder()
+    cb.store_uint(1, 32)
+
+    assert cell == cell_copy
+    assert cb.used_bits == 42
+
 
 def test_hashes():
 
