@@ -120,10 +120,10 @@ class HashMap:
             key_deserializer = lambda i: int(i, 2)  # by default key_deserializer just converts bitstring to int
         dict_result = parse_hashmap(dict_cell, key_length)
         if value_deserializer:
-            result = {key_deserializer(i): value_deserializer(j.to_slice()) for i, j in dict_result.items()}
+            result = {key_deserializer(i): value_deserializer(j) for i, j in dict_result.items()}
         else:
             result = {key_deserializer(i): j for i, j in
-                      dict_result.items()}  # if you do not provide value_deserializer the values are NullCells
+                      dict_result.items()}  # if you do not provide value_deserializer the values are Slices
         return result
 
     #
