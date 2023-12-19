@@ -64,6 +64,8 @@ class NullCell:
         if self.refs:
             text += f' -> {{\n'
             for index, ref in enumerate(self.refs):
+                if ref is None:
+                    continue
                 next_comma = True if index != len(self.refs) - 1 else False
                 text += '\t' * t + ref.__str__(t + 1, next_comma) + '\n'
             text += '\t' * (t - 1) + '}'
