@@ -141,15 +141,15 @@ class Slice(NullCell):
             return 0
         return self.load_uint(length * 8)
 
-    def preload_string(self, byte_length: int = 0):
+    def preload_string(self, byte_length: int = 0) -> str:
         if byte_length == 0:
             byte_length = len(self.bits) // 8
-        return self.preload_bytes(byte_length)
+        return self.preload_bytes(byte_length).decode()
 
-    def load_string(self, byte_length: int = 0):
+    def load_string(self, byte_length: int = 0) -> str:
         if byte_length == 0:
             byte_length = len(self.bits) // 8
-        return self.load_bytes(byte_length)
+        return self.load_bytes(byte_length).decode()
 
     def load_snake_bytes(self) -> bytes:
         assert not self.remaining_bits % 8, f'invalid string length: {self.remaining_bits}'
