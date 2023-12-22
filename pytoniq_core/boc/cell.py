@@ -278,9 +278,6 @@ class Cell(NullCell):
     def copy(self):
         return Cell(self.bits.copy(), self.refs.copy(), self.type_)
 
-    def to_tonsdk_cell(self, cell_cls):
-        return cell_cls.one_from_boc(self.to_boc())
-
     def __hash__(self) -> int:  # for dicts
         return int.from_bytes(self._hash, 'big')
 

@@ -68,7 +68,6 @@ class Address:
         """
         Note that to_str(is_user_friendly=False) is 20 times faster than to_str(is_user_friendly=True)
         """
-        # interface reference https://github.com/tonfactory/tonsdk/blob/master/tonsdk/utils/_address.py#L108
 
         if not is_user_friendly:
             return f'{self.wc}:{self.hash_part.hex()}'
@@ -101,19 +100,6 @@ class Address:
             .store_int(self.wc, 8)\
             .store_bytes(self.hash_part)\
             .end_cell()
-
-    @classmethod
-    def from_tonsdk_address(cls, address):
-        """
-        Usage: Address.from_tonsdk_address(tonsdk.utils.Address('address'))
-        """
-        return cls(address.to_string(False))
-
-    def to_tonsdk_address(self, cls):
-        """
-        Usage: Address('0:33333...').to_tonsdk_address(tonsdk.utils.Address)
-        """
-        return cls(self.to_str(False))
 
     # def __str__(self):
     #     return self.to_str()
