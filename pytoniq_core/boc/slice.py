@@ -161,11 +161,8 @@ class Slice(NullCell):
     def load_snake_string(self) -> str:
         return self.load_snake_bytes().decode()
 
-    def preload_ref(self) -> Cell:
-        return self.refs[self.ref_offset]
-
-    def preload_ref_offset(self, offset: int = 0) -> Cell:
-        return self.refs[offset]
+    def preload_ref(self, offset: int = 0) -> Cell:
+        return self.refs[self.ref_offset + offset]
 
     def load_ref(self) -> Cell:
         ref = self.refs[self.ref_offset]
