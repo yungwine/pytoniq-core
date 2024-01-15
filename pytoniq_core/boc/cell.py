@@ -43,6 +43,8 @@ class Cell(NullCell):
             # Ordinary Cell level = max(Cell refs)
             mask = 0
             for r in self.refs:
+                if r is None:
+                    continue
                 mask |= r.level_mask.mask
             return LevelMask(mask)
         elif self.type_ == CellTypes.pruned_branch:
@@ -166,6 +168,8 @@ class Cell(NullCell):
                 hash_.update(self._hashes[off])
             depth = 0
             for r in self.refs:
+                if r is None:
+                    continue
                 if self.type_ in (CellTypes.merkle_proof, CellTypes.merkle_update):
                     ref_depth = r.get_depth(li + 1)
                 else:
@@ -179,6 +183,8 @@ class Cell(NullCell):
                 if depth >= 1024:  # Cell max depth
                     raise CellError('depth is more than max depth')
             for r in self.refs:
+                if r is None:
+                    continue
                 if self.type_ in (CellTypes.merkle_proof, CellTypes.merkle_update):
                     hash_.update(r.get_hash(li + 1))
                 else:
