@@ -3,7 +3,7 @@ from .cell import Cell, CellError
 from .builder import Builder
 from .exotic import CellTypes
 from .hashmap import *
-from .address import Address, AddressError
+from .address import Address, AddressError, ExternalAddress
 from .tvm_bitarray import TvmBitarray
 
 

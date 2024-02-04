@@ -133,10 +133,13 @@ class ExternalAddress:
         return (Builder()
                 .store_bits('01')
                 .store_uint(self.len, 9)
-                .store_uint(self.external_address)
+                .store_uint(self.external_address, self.len)
                 .end_cell())
 
     def __repr__(self):
         if self.len is not None:
             return f'ExternalAddress<{hex(self.external_address)}>'
         return f'ExternalAddress<{self.external_address}>'
+
+    def __eq__(self, other):
+        return self.external_address == other.external_address and self.len == other.len

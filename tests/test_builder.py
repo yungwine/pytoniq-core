@@ -2,7 +2,7 @@ import pytest
 import typing
 
 import pytoniq_core
-from pytoniq_core.boc import begin_cell, Builder, Address, Cell
+from pytoniq_core.boc import begin_cell, Builder, Address, Cell, ExternalAddress
 
 
 @pytest.mark.parametrize("num,num_len", [
@@ -180,3 +180,9 @@ def test_builder_exotic():
     assert proof.is_exotic
 
     assert proof[0].get_hash(0) == cell.hash
+
+
+def test_builder_ext_address():
+    builder = Builder()
+    builder.store_address(ExternalAddress(0x12345678, 32))
+    assert builder.end_cell().begin_parse().load_address() == ExternalAddress(0x12345678, 32)
