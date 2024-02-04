@@ -5,7 +5,7 @@ from bitarray.util import int2ba
 
 import typing
 
-from .address import Address
+from .address import Address, ExternalAddress
 from .cell import Cell
 from .slice import Slice
 from .deserialize import NullCell, Boc
@@ -160,10 +160,16 @@ class Builder(NullCell):
             value = b'\x00' + value
         return self.store_snake_bytes(value)
 
-    def store_address(self, address):
+    def store_address(self, address: typing.Union[Address, ExternalAddress, str, None]):
+        """
+        :param address: internal address of type Address or its string representation, ExternalAddress or None
+        :return:
+        """
         if address is None:
             self.store_bits('00')
             return self
+        if isinstance(address, ExternalAddress):
+            return self.store_cell(address.to_cell())
         if isinstance(address, str):
             address = Address(address)
 
