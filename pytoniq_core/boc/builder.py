@@ -150,6 +150,8 @@ class Builder(NullCell):
         if len(value) == 0:
             return self
         i = self.available_bytes
+        if len(value) <= i:
+            return self.store_bytes(value)
         return self.store_bytes(value[:i]).store_ref(Builder().store_snake_bytes(value[i:]).end_cell())
 
     def store_snake_string(self, value: str, need_prefix: bool = False):
