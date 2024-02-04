@@ -4,7 +4,7 @@ from bitarray.util import ba2int
 from .deserialize import Boc, NullCell
 from .cell import Cell
 from .tvm_bitarray import TvmBitarray, BitarrayLike
-from .address import Address
+from .address import Address, ExternalAddress
 
 
 class Slice(NullCell):
@@ -93,10 +93,14 @@ class Slice(NullCell):
 
         return Address((wc, hash_part))
 
-    def load_address(self) -> typing.Optional[Address]:
-        # address := flags 2bits, anycast 1bit, workchain 8bits, hash_part 256bits = 267 bits
-        if self.load_uint(2) == 0:
+    def load_address(self) -> typing.Union[Address, ExternalAddress, None]:
+        tag = self.load_uint(2)
+        if tag == 0:
             return None
+        elif tag == 1:
+            len_ = self.load_uint(9)
+            return ExternalAddress(self.load_uint(len_), len_)
+        # todo: addr_var
         self.skip_bits(1)
         wc = self.load_int(8)
         hash_part = self.load_bytes(32)

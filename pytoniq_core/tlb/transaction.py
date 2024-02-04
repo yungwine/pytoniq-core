@@ -159,7 +159,7 @@ class MessageAny(TlbScheme):
         builder = Builder().store_cell(self.info.serialize())
         if self.init:
             builder.store_bit(1)  # maybe true
-            if len(self.init.serialize().bits) <= builder.available_bits:
+            if len(self.init.serialize().bits) <= builder.available_bits and len(self.init.serialize().refs) <= builder.available_refs:
                 builder.store_bit(0)  # Either left
                 builder.store_cell(self.init.serialize())
             else:
@@ -167,7 +167,7 @@ class MessageAny(TlbScheme):
                 builder.store_ref(self.init.serialize())
         else:
             builder.store_bit(0)  # maybe false
-        if len(self.body.bits) <= builder.available_bits:
+        if len(self.body.bits) <= builder.available_bits and len(self.body.refs) <= builder.available_refs:
             builder.store_bit(0)  # Either left
             builder.store_cell(self.body)
         else:

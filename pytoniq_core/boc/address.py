@@ -1,5 +1,6 @@
 import base64
 import binascii
+import typing
 
 from ..crypto.crc import crc16
 from .cell import Cell
@@ -112,3 +113,30 @@ class Address:
     
     def __hash__(self):
         return int.from_bytes(self.hash_part, "big") + self.wc
+
+
+class ExternalAddress:
+    def __init__(self, address: typing.Union[int, str, bytes, None], length: int = None):
+        if isinstance(address, str):
+            address = bytes.fromhex(address)
+        if isinstance(address, bytes):
+            address = int.from_bytes(address, 'big')
+        if length is None:
+            length = address.bit_length()
+        self.external_address = address
+        self.len = length
+
+    def to_cell(self):
+        from .builder import Builder
+        if self.external_address is None:
+            return Builder().store_bits('00').end_cell()
+        return (Builder()
+                .store_bits('01')
+                .store_uint(self.len, 9)
+                .store_uint(self.external_address)
+                .end_cell())
+
+    def __repr__(self):
+        if self.len is not None:
+            return f'ExternalAddress<{hex(self.external_address)}>'
+        return f'ExternalAddress<{self.external_address}>'
