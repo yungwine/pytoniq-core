@@ -187,7 +187,7 @@ class TlSchemas:
                     result += self.serialize(self.get_by_name(type_), value, boxed=False)
         return result
 
-    def serialize(self, schema: TlSchema, data: dict, boxed: bool = True) -> bytes:
+    def serialize(self, schema: typing.Union[TlSchema, str], data: dict, boxed: bool = True) -> bytes:
         logger.log(level=5, msg=f'serializing schema {schema}')
         # https://core.telegram.org/mtproto/serialize
         """
@@ -196,6 +196,8 @@ class TlSchemas:
         :param boxed: need TL id prefix?
         :return: TL-serialized bytes
         """
+        if isinstance(schema, str):
+            schema = self.get_by_name(schema)
         if boxed:
             result = schema.little_id()
         else:
