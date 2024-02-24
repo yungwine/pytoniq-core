@@ -130,6 +130,7 @@ class TlSchemas:
 
     def set_default_untouchables(self):
         self.untouchables['adnl.message.part'] = {'data'}
+        self.untouchables['overlay.broadcastFec'] = {'data'}
 
     def serialize_field(self, type_: str, value):
         logger.log(level=5, msg=f'serializing {type_} with value {value}')
