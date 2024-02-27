@@ -1293,3 +1293,102 @@ class ImportFees(TlbScheme):
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         return cls(fees_collected=cell_slice.load_coins(), value_imported=CurrencyCollection.deserialize(cell_slice))
+
+
+class LibRef(TlbScheme):
+    """
+    libref_hash$0 lib_hash:bits256 = LibRef;
+    libref_ref$1 library:^Cell = LibRef;
+    """
+    def __init__(self, type_: typing.Literal["libref_hash", "libref_ref"], lib_hash: bytes = None, library: Cell = None):
+        self.type_ = type_
+        self.lib_hash = lib_hash
+        self.library = library
+
+    def serialize(self, *args):
+        ...
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        tag = cell_slice.load_bit()
+        if not tag:
+            return cls('libref_hash', lib_hash=cell_slice.load_bytes(32))
+        return cls('libref_ref', library=cell_slice.load_ref())
+
+
+class OutAction(TlbScheme):
+    """
+    action_send_msg#0ec3c86d mode:(## 8)
+      out_msg:^(MessageRelaxed Any) = OutAction;
+
+    action_set_code#ad4de08e new_code:^Cell = OutAction;
+
+    action_reserve_currency#36e6b809 mode:(## 8) currency:CurrencyCollection = OutAction;
+
+    action_change_library#26fa1dd4 mode:(## 7) libref:LibRef = OutAction;
+    """
+    def __init__(self,
+                    type_: typing.Literal["action_send_msg", "action_set_code", "action_reserve_currency", "action_change_library"],
+                    mode: int = None,
+                    out_msg: typing.Optional[MessageAny] = None,
+                    new_code: Cell = None,
+                    currency: CurrencyCollection = None,
+                    libref: LibRef = None
+                 ):
+        self.type_ = type_
+        self.mode = mode
+        self.out_msg = out_msg
+        self.new_code = new_code
+        self.currency = currency
+        self.libref = libref
+
+    def serialize(self, *args):
+        ...
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        tag = cell_slice.load_uint(32)
+        if tag == 0x0ec3c86d:
+            return cls('action_send_msg',
+                       mode=cell_slice.load_uint(8),
+                       out_msg=MessageAny.deserialize(cell_slice.load_ref().begin_parse())
+                       )
+        if tag == 0xad4de08e:
+            return cls('action_set_code',
+                       new_code=cell_slice.load_ref()
+                       )
+        if tag == 0x36e6b809:
+            return cls('action_reserve_currency',
+                       mode=cell_slice.load_uint(8),
+                       currency=CurrencyCollection.deserialize(cell_slice)
+                       )
+        if tag == 0x26fa1dd4:
+            return cls('action_change_library',
+                       mode=cell_slice.load_uint(7),
+                       libref=LibRef.deserialize(cell_slice)
+                       )
+        raise TransactionError(f'OutAction deserialization error: unknown prefix tag {tag}')
+
+
+class OutList(TlbScheme):
+    """
+    out_list_empty$_ = OutList 0;
+
+    out_list$_ {n:#} prev:^(OutList n) action:OutAction = OutList (n + 1);
+    """
+
+    def __init__(self, type_: typing.Literal["out_list_empty", "out_list"], actions: typing.List[OutAction] = None):
+        if actions is None:
+            actions = []
+        self.type_ = type_
+        self.actions = actions
+
+    def serialize(self, *args):
+        ...
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice) -> list:
+        if not cell_slice.remaining_bits:
+            return []
+        prev = OutList.deserialize(cell_slice.load_ref().begin_parse())
+        return prev + [OutAction.deserialize(cell_slice)]
