@@ -68,7 +68,7 @@ class VmStackValue(TlbScheme):
         if value is None:
             builder.store_bytes(b'\x00')
         elif isinstance(value, int):
-            if value.bit_length() <= 64:
+            if value.bit_length() < 64:
                 builder.store_bytes(b'\x01')
                 builder.store_int(value, 64)
             else:
