@@ -7,6 +7,10 @@ from .tvm_bitarray import TvmBitarray, BitarrayLike
 from .address import Address, ExternalAddress
 
 
+class SliceError(Exception):
+    pass
+
+
 class Slice(NullCell):
 
     def __init__(self, bits: TvmBitarray, refs: typing.List[Cell], type_: int = -1):
@@ -81,11 +85,19 @@ class Slice(NullCell):
         del self.bits[:length * 8]
         return bytes_
 
-    def preload_address(self) -> typing.Optional[Address]:
-        # address := flags 2bits, anycast 1bit, workchain 8bits, hash_part 256bits = 267 bits
-        rem = self.preload_bits(2)
-        if rem.to01() == '00':
+    def preload_address(self) -> typing.Union[Address, ExternalAddress, None]:
+        rem = self.preload_uint(2)
+        if not rem:
             return None
+        if rem == 1:
+            len_ = int(self.preload_bits(11)[2:].to01(), 2)
+            addr = int(self.preload_bits(11 + len_)[11:].to01(), 2)
+            return ExternalAddress(addr, len_)
+        if rem != 2:
+            raise SliceError('Unsupported address type')
+        if self.preload_uint(3) % 2:
+            raise SliceError('Unsupported anycast in preload_address')
+
         rem = self.preload_bits(267)
 
         wc = ba2int(rem[3:11], signed=True)
@@ -101,10 +113,22 @@ class Slice(NullCell):
             len_ = self.load_uint(9)
             return ExternalAddress(self.load_uint(len_), len_)
         # todo: addr_var
-        self.skip_bits(1)
-        wc = self.load_int(8)
-        hash_part = self.load_bytes(32)
-        return Address((wc, hash_part))
+        is_anycast = False
+        if self.load_bool():
+            is_anycast = True
+            depth = self.load_uint(5)
+            if depth < 1:
+                raise SliceError('Anycast depth must be greater than 0')
+            pfx = self.load_uint(depth)
+        if tag == 2:
+            wc = self.load_int(8)
+            hash_part = self.load_bytes(32)
+            addr = Address((wc, hash_part))
+        else:
+            raise SliceError('Unknown address type')  # todo: addr_var
+        if is_anycast:
+            addr.set_anycast(depth, pfx)
+        return addr
 
     def preload_var_uint(self, bit_length: int) -> int:
         length = self.preload_uint(bit_length)
@@ -229,7 +253,7 @@ class Slice(NullCell):
 
     def to_builder(self):
         if self.is_special():
-            raise Exception('cant convert exotic slice to builder')
+            raise SliceError('cant convert exotic slice to builder')
         from .builder import Builder
         return Builder().store_slice(self)
 
