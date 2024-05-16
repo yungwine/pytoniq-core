@@ -649,7 +649,8 @@ class ConfigParams(TlbScheme):
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
-        return cls(config_addr=cell_slice.load_bytes(32).hex(), config=cell_slice.load_ref().begin_parse().load_hashmap(32, value_deserializer=lambda src: src.load_ref().begin_parse()))
+        return cls(config_addr=cell_slice.load_bytes(32).hex(),
+                   config=cell_slice.load_ref().begin_parse().load_hashmap(32, key_deserializer=lambda src: Builder().store_bits(src).to_slice().load_int(32), value_deserializer=lambda src: src.load_ref().begin_parse()))
 
 
 class ValidatorInfo(TlbScheme):
