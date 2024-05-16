@@ -1,9 +1,16 @@
 import base64
 import binascii
 import typing
+from dataclasses import dataclass
 
 from ..crypto.crc import crc16
 from .cell import Cell
+
+
+@dataclass
+class Anycast:
+    depth: int
+    rewrite_pfx: int
 
 
 class AddressError(Exception):
@@ -20,6 +27,7 @@ class Address:
         self.hash_part: bytes = None
         self.is_bounceable = False
         self.is_test_only = False
+        self.anycast = None
 
         if isinstance(address, tuple):
             # Address((-1, b'\x11\x01\xff...'))
@@ -37,6 +45,9 @@ class Address:
             return
 
         raise AddressError('unknown address type provided')
+
+    def set_anycast(self, depth: int, rewrite_pfx: int):
+        self.anycast = Anycast(depth, rewrite_pfx)
 
     def is_hex(self, addr: str) -> bool:
         try:
@@ -109,6 +120,8 @@ class Address:
         return self.wc == other.wc and self.hash_part == other.hash_part
 
     def __repr__(self):
+        if self.anycast is not None:
+            return f'Address<{self.to_str()} with {self.anycast}>'
         return f'Address<{self.to_str()}>'
     
     def __hash__(self):
