@@ -223,15 +223,14 @@ class Cell(NullCell):
         flags |= cells_len
         flags = flags.to_bytes(1, 'big')
 
-        payload = b''
-
+        payloads = []
         serialized_cells_len = []
-
         for cell in ordered_cells:
             ser_result = cell.serialize(ordered_cells, cells_len)
-            payload += ser_result
+            payloads.append(ser_result)
             serialized_cells_len.append(len(ser_result))
 
+        payload = b''.join(payloads)
         payload_len = (len(payload).bit_length() + 7) // 8
 
         root_num = 1  # currently 1
@@ -239,19 +238,23 @@ class Cell(NullCell):
 
         absent = b'\x00' * cells_len
 
-        result = b'\xb5\xee\x9cr' + \
-                 flags + \
-                 payload_len.to_bytes(1, 'big') + \
-                 cells_num.to_bytes(cells_len, 'big') + \
-                 root_num.to_bytes(cells_len, 'big') + \
-                 absent + \
-                 len(payload).to_bytes(payload_len, 'big') + \
-                 root_index
+        result = [
+            b'\xb5\xee\x9cr',
+            flags,
+            payload_len.to_bytes(1, 'big'),
+            cells_num.to_bytes(cells_len, 'big'),
+            root_num.to_bytes(cells_len, 'big'),
+            absent,
+            len(payload).to_bytes(payload_len, 'big'),
+            root_index,
+        ]
 
         if has_idx:
             for l in serialized_cells_len:
-                result += l.to_bytes(payload_len, 'big')
-        result += payload
+                result.append(l.to_bytes(payload_len, 'big'))
+
+        result.append(payload)
+        result = b''.join(result)
         if hash_crc32:
             result += crc32c(result)
         return result
