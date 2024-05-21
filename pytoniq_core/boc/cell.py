@@ -223,7 +223,7 @@ class Cell(NullCell):
         flags |= cells_len
         flags = flags.to_bytes(1, 'big')
 
-        payload = b''
+        payload = bytearray()
 
         serialized_cells_len = []
 
@@ -239,7 +239,7 @@ class Cell(NullCell):
 
         absent = b'\x00' * cells_len
 
-        result = b'\xb5\xee\x9cr' + \
+        result = bytearray(b'\xb5\xee\x9cr') + \
                  flags + \
                  payload_len.to_bytes(1, 'big') + \
                  cells_num.to_bytes(cells_len, 'big') + \
@@ -254,7 +254,7 @@ class Cell(NullCell):
         result += payload
         if hash_crc32:
             result += crc32c(result)
-        return result
+        return bytes(result)
 
     @classmethod
     def from_boc(cls, data: typing.Any) -> typing.List["Cell"]:
