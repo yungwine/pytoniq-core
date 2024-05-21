@@ -215,9 +215,10 @@ class Boc:
         else:
             cell_type = -1
         cell_refs_indexes = [
-            bytes_to_uint(data[i: i + ref_index_size])
-            for i in range(i, total_refs * ref_index_size, ref_index_size)
+            bytes_to_uint(data[j: j + ref_index_size])
+            for j in range(i, i + total_refs * ref_index_size, ref_index_size)
         ]
+        i += total_refs * ref_index_size
         # cell = NullCell(bits, cell_refs_indexes, cell_type)
         cell = {'bits': bits, 'refs': cell_refs_indexes, 'type': cell_type, 'result': None}
 
