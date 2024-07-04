@@ -109,6 +109,52 @@ class HighloadWalletData(TlbScheme):
     def deserialize(cls, cell_slice: Slice):
         return cls(wallet_id=cell_slice.load_uint(32), last_cleaned=cell_slice.load_uint(64), public_key=cell_slice.load_bytes(32), old_queries=cell_slice.load_dict(key_length=64, value_deserializer=cls.old_queries_deserializer))
 
+class HighloadWalletV3Data(TlbScheme):
+    """
+    highload_wallet_data#_ public_key:bits256 wallet_id:uint32 old_queries:(HashmapE 64 WalletMessage) queries:(HashmapE 64 WalletMessage) last_cleaned:uint64 timeout:uint22 = HighloadWalletV3Data;
+    """
+    def __init__(self,
+                 public_key: typing.Optional[bytes] = None,
+                 wallet_id: typing.Optional[int] = None,
+                 old_queries: typing.Optional[dict] = None,
+                 queries: typing.Optional[dict] = None,
+                 last_cleaned: typing.Optional[int] = None,
+                 timeout: typing.Optional[int] = None
+                 ):
+        if wallet_id is None:
+            wallet_id = 698983191
+        self.wallet_id = wallet_id
+        if public_key is None:
+            raise Exception('Public Key required for Wallet!')
+        self.last_cleaned = last_cleaned
+        self.public_key = public_key
+        self.old_queries = old_queries
+        self.queries = queries
+        self.timeout = timeout
+
+    @staticmethod
+    def old_queries_serializer(src, dest):
+        dest.store_cell(src.serialize())
+
+    @staticmethod
+    def old_queries_deserializer(src):
+        return WalletMessage.deserialize(src)
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder\
+            .store_bytes(self.public_key) \
+            .store_uint(self.wallet_id, 32) \
+            .store_dict(HashMap(key_size=64, value_serializer=self.old_queries_serializer).serialize()) \
+            .store_dict(HashMap(key_size=64, value_serializer=self.old_queries_serializer).serialize()) \
+            .store_uint(self.last_cleaned, 64) \
+            .store_uint(self.timeout, 22)
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        return cls(public_key=cell_slice.load_bytes(32), wallet_id=cell_slice.load_uint(32), old_queries=cell_slice.load_dict(key_length=64, value_deserializer=cls.old_queries_deserializer), queries=cell_slice.load_dict(key_length=64, value_deserializer=cls.old_queries_deserializer), last_cleaned=cell_slice.load_uint(64), timeout=cell_slice.load_uint(22))
+
 
 class WalletMessage(TlbScheme):
     """
