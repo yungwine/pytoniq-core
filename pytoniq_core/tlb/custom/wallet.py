@@ -153,15 +153,15 @@ class HighloadWalletV3Data(TlbScheme):
         builder\
             .store_bytes(self.public_key) \
             .store_uint(self.wallet_id, 32) \
-            .store_dict(HashMap(key_size=64, value_serializer=self.old_queries_serializer).serialize()) \
-            .store_dict(HashMap(key_size=64, value_serializer=self.queries_serializer).serialize()) \
+            .store_dict(HashMap(key_size=14, value_serializer=self.old_queries_serializer).serialize()) \
+            .store_dict(HashMap(key_size=14, value_serializer=self.queries_serializer).serialize()) \
             .store_uint(self.last_cleaned, 64) \
             .store_uint(self.timeout, 22)
         return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
-        return cls(public_key=cell_slice.load_bytes(32), wallet_id=cell_slice.load_uint(32), old_queries=cell_slice.load_dict(key_length=64, value_deserializer=cls.old_queries_deserializer), queries=cell_slice.load_dict(key_length=64, value_deserializer=cls.queries_deserializer), last_cleaned=cell_slice.load_uint(64), timeout=cell_slice.load_uint(22))
+        return cls(public_key=cell_slice.load_bytes(32), wallet_id=cell_slice.load_uint(32), old_queries=cell_slice.load_dict(key_length=14, value_deserializer=cls.old_queries_deserializer), queries=cell_slice.load_dict(key_length=14, value_deserializer=cls.queries_deserializer), last_cleaned=cell_slice.load_uint(64), timeout=cell_slice.load_uint(22))
 
 
 class WalletMessage(TlbScheme):
