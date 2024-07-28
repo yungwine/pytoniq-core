@@ -117,7 +117,7 @@ class Address:
     #     return self.to_str()
 
     def __eq__(self, other: "Address"):
-        return self.wc == other.wc and self.hash_part == other.hash_part
+        return self.wc == other.wc and self.hash_part == other.hash_part and self.anycast == other.anycast
 
     def __repr__(self):
         if self.anycast is not None:
