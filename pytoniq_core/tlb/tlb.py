@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 
 def is_builtin_class_instance(obj):
-    return obj.__class__.__module__ == '__builtins__'
+    return obj.__class__.__module__ in ['__builtins__', 'builtins']
 
 
 class TlbError(Exception):
@@ -32,3 +32,16 @@ class TlbScheme(ABC):
         # return s + '\t' * t + '>' + '\n'
         return f'< Tl-B {self.__class__.__name__} {" ".join([i + ": " + j.__repr__() for i, j in self.__dict__.items()])} >'
         # TODO beautiful repr
+
+    def __json__(self):
+        # if __json__ is not defined for a class, it will return str(obj)
+        ret = {}
+        for i, j in self.__dict__.items():
+            if is_builtin_class_instance(j):
+                ret[i] = j
+            elif hasattr(j, '__json__'):
+                ret[i] = j.__json__()
+            else:
+                ret[i] = str(j)
+        ret['type'] = self.__class__.__name__
+        return ret

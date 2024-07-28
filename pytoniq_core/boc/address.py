@@ -127,6 +127,15 @@ class Address:
     def __hash__(self):
         return int.from_bytes(self.hash_part, "big") + self.wc
 
+    def __json__(self):
+        if self.anycast is not None:
+            # to_str ignores anycast, that can be dangerous as default strategy
+            # thus fallback to __repr__
+            return self.__repr__()
+        # flags like is_bounceable, is_test_only, as well as url-safeness
+        # are application dependent thus in json use not user-friendly form
+        return self.to_str(is_user_friendly=False)
+
 
 class ExternalAddress:
     def __init__(self, address: typing.Union[int, str, bytes, None], length: int = None):
