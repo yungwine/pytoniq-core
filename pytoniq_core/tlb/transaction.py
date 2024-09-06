@@ -1052,10 +1052,40 @@ class IntermediateAddress(TlbScheme):  # TODO: maybe move to account.py
         if not tag:  # 0
             return cls('interm_addr_regular', use_dest_bits=cell_slice.load_uint(7))
         tag = cell_slice.load_bit()
-        if tag:  # 10
+        if not tag:  # 10
             return cls('interm_addr_simple', workchain_id=cell_slice.load_int(8), addr_pfx=cell_slice.load_uint(64))
         # 11
         return cls('interm_addr_ext', workchain_id=cell_slice.load_int(32), addr_pfx=cell_slice.load_uint(64))
+
+
+class MsgMetadata(TlbScheme):
+    """
+    msg_metadata#0 depth:uint32 initiator_addr:MsgAddressInt initiator_lt:uint64 = MsgMetadata;
+    """
+
+    def __init__(self,
+                 depth: int,
+                 initiator_addr: Address,
+                 initiator_lt: int
+                 ):
+        self.depth = depth
+        self.initiator_addr = initiator_addr
+        self.initiator_lt = initiator_lt
+
+    @classmethod
+    def serialize(cls, *args):
+        ...
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        tag = cell_slice.load_uint(4)
+        if tag != 0:
+            raise TransactionError(f'MsgMetadata deserialization error tag: {tag}')
+        return cls(
+            depth=cell_slice.load_uint(32),
+            initiator_addr=cell_slice.load_address(),
+            initiator_lt=cell_slice.load_uint(64)
+        )
 
 
 class MsgEnvelope(TlbScheme):
@@ -1063,16 +1093,29 @@ class MsgEnvelope(TlbScheme):
     msg_envelope#4 cur_addr:IntermediateAddress
     next_addr:IntermediateAddress fwd_fee_remaining:Grams
     msg:^(Message Any) = MsgEnvelope;
+
+    msg_envelope_v2#5 cur_addr:IntermediateAddress
+    next_addr:IntermediateAddress fwd_fee_remaining:Grams
+    msg:^(Message Any)
+    emitted_lt:(Maybe uint64)
+    metadata:(Maybe MsgMetadata) = MsgEnvelope;
     """
 
     def __init__(self,
+                 type_: str,
                  cur_addr: IntermediateAddress,
                  next_addr: IntermediateAddress,
                  fwd_fee_remaining: int,
-                 msg: MessageAny):
+                 msg: MessageAny,
+                 emitted_lt: typing.Optional[int] = None,
+                 metadata: typing.Optional[MsgMetadata] = None
+                 ):
+        self.type_ = type_
         self.cur_addr = cur_addr
         self.next_addr = next_addr
         self.fwd_fee_remaining = fwd_fee_remaining
+        self.emitted_lt = emitted_lt
+        self.metadata = metadata
         self.msg = msg
 
     @classmethod
@@ -1082,13 +1125,27 @@ class MsgEnvelope(TlbScheme):
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         tag = cell_slice.load_uint(4)
-        if tag != 4:
+        if tag not in (4, 5):
             raise TransactionError(f'MsgEnvelope deserialization error tag: {tag}')
+        cur_addr = IntermediateAddress.deserialize(cell_slice)
+        next_addr = IntermediateAddress.deserialize(cell_slice)
+        fwd_fee_remaining = cell_slice.load_coins()
+        msg = MessageAny.deserialize(cell_slice.load_ref().begin_parse())
+        emitted_lt = None
+        metadata = None
+        type_ = 'msg_envelope'
+        if tag == 5:
+            type_ = 'msg_envelope_v2'
+            emitted_lt = cell_slice.load_uint(64) if cell_slice.load_bit() else None
+            metadata = MsgMetadata.deserialize(cell_slice) if cell_slice.load_bit() else None
         return cls(
-            cur_addr=IntermediateAddress.deserialize(cell_slice),
-            next_addr=IntermediateAddress.deserialize(cell_slice),
-            fwd_fee_remaining=cell_slice.load_coins(),
-            msg=MessageAny.deserialize(cell_slice.load_ref().begin_parse())
+            type_=type_,
+            cur_addr=cur_addr,
+            next_addr=next_addr,
+            fwd_fee_remaining=fwd_fee_remaining,
+            msg=msg,
+            emitted_lt=emitted_lt,
+            metadata=metadata
         )
 
 
