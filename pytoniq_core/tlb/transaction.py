@@ -1170,6 +1170,11 @@ class InMsg(TlbScheme):
 
     msg_discard_tr$111 in_msg:^MsgEnvelope transaction_id:uint64
         fwd_fee:Grams proof_delivered:^Cell = InMsg;
+
+    msg_import_deferred_fin$00100 in_msg:^MsgEnvelope
+        transaction:^Transaction fwd_fee:Grams = InMsg;
+
+    msg_import_deferred_tr$00101 in_msg:^MsgEnvelope out_msg:^MsgEnvelope = InMsg;
     """
     def __init__(self,
                  type_: str,
@@ -1235,6 +1240,20 @@ class InMsg(TlbScheme):
                        fwd_fee=cell_slice.load_coins(),
                        proof_delivered=cell_slice.load_ref()
                        )
+        if tag == '001':
+            tag += cell_slice.load_bits(2).to01()
+            if tag == '00100':
+                return cls('msg_import_deferred_fin',
+                           in_msg=MsgEnvelope.deserialize(cell_slice.load_ref().begin_parse()),
+                           transaction=Transaction.deserialize(cell_slice.load_ref().begin_parse()),
+                           fwd_fee=cell_slice.load_coins()
+                           )
+            if tag == '00101':
+                return cls('msg_import_deferred_tr',
+                           in_msg=MsgEnvelope.deserialize(cell_slice.load_ref().begin_parse()),
+                           out_msg=MsgEnvelope.deserialize(cell_slice.load_ref().begin_parse())
+                           )
+
         raise TransactionError(f'InMsg deserialization error: unknown prefix tag {tag}')
 
 
