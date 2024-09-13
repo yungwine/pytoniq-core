@@ -1349,6 +1349,18 @@ class OutMsg(TlbScheme):
                        next_addr_pfx=cell_slice.load_uint(64),
                        import_block_lt=cell_slice.load_uint(64)
                        )
+        if tag == '1010':
+            tag += str(cell_slice.load_bits(1).to01())
+            if tag == '10100':
+                return cls('msg_export_new_defer',
+                           out_msg=MsgEnvelope.deserialize(cell_slice.load_ref().begin_parse()),
+                           transaction=Transaction.deserialize(cell_slice.load_ref().begin_parse()),
+                           )
+            if tag == '10101':
+                return cls('msg_export_deferred_tr',
+                           out_msg=MsgEnvelope.deserialize(cell_slice.load_ref().begin_parse()),
+                           imported=InMsg.deserialize(cell_slice.load_ref().begin_parse()),
+                           )
         raise TransactionError(f'OutMsg deserialization error: unknown prefix tag {tag}')
 
 
