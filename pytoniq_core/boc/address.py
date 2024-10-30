@@ -56,7 +56,7 @@ class Address:
             self.wc = int(wc)
             self.hash_part = bytes.fromhex(hash_part)
             return True
-        except ValueError:
+        except (ValueError, IndexError):
             return False
 
     def is_b64(self, addr: str) -> bool:
@@ -73,7 +73,7 @@ class Address:
             if decoded[34:] != crc16(decoded[:34]):
                 raise AddressError('the address is invalid')
             return True
-        except binascii.Error:
+        except (binascii.Error, IndexError):
             return False
 
     def to_str(self, is_user_friendly=True, is_url_safe=True, is_bounceable=True, is_test_only=False):
