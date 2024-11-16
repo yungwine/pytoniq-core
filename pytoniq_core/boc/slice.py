@@ -144,14 +144,14 @@ class Slice(NullCell):
         return self.load_uint(length * 8)
 
     def preload_var_int(self, bit_length: int) -> int:
-        length = self.preload_int(bit_length)
+        length = self.preload_uint(bit_length)
         if not length:
             return 0
         num = self.preload_bits(bit_length + length * 8)[bit_length:]
         return ba2int(num, signed=True)
 
     def load_var_int(self, bit_length: int) -> int:
-        length = self.load_int(bit_length)
+        length = self.load_uint(bit_length)
         if not length:
             return 0
         return self.load_int(length * 8)
