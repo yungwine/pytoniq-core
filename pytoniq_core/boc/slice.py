@@ -137,10 +137,10 @@ class Slice(NullCell):
         num = self.preload_bits(bit_length + length * 8)[bit_length:]
         return ba2int(num, signed=False)
 
-    def load_var_uint(self, bit_length: int) -> typing.Optional[int]:
+    def load_var_uint(self, bit_length: int) -> int:
         length = self.load_uint(bit_length)
         if not length:
-            return None
+            return 0
         return self.load_uint(length * 8)
 
     def preload_var_int(self, bit_length: int) -> int:
@@ -150,10 +150,10 @@ class Slice(NullCell):
         num = self.preload_bits(bit_length + length * 8)[bit_length:]
         return ba2int(num, signed=True)
 
-    def load_var_int(self, bit_length: int) -> typing.Optional[int]:
+    def load_var_int(self, bit_length: int) -> int:
         length = self.load_int(bit_length)
         if not length:
-            return None
+            return 0
         return self.load_int(length * 8)
 
     def preload_coins(self) -> int:

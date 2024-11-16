@@ -130,7 +130,7 @@ class Builder(NullCell):
 
     def store_var_int(self, value: int, bit_length: int):
         if value == 0:
-            self.store_uint(0, bit_length)
+            return self.store_uint(0, bit_length)
         byte_length = math.ceil(value.bit_length() / 8)
         return self.store_uint(byte_length, bit_length).store_int(value, byte_length * 8)
 
