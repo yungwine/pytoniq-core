@@ -58,3 +58,9 @@ def test_var_ints():
     assert begin_cell().store_var_int(-10, 10).to_slice().load_var_int(10) == -10
     assert begin_cell().store_var_uint(10, 10).to_slice().load_var_uint(10) == 10
 
+    assert begin_cell().store_var_int(0, 10).to_slice().load_var_int(10) == 0
+    assert begin_cell().store_var_uint(0, 10).to_slice().load_var_uint(10) == 0
+
+    assert begin_cell().store_var_int(1, 1).to_slice().load_var_int(1) == 1
+    assert begin_cell().store_var_int(1, 1).to_slice().preload_var_int(1) == 1
+
