@@ -80,7 +80,7 @@ class Transaction(TlbScheme):
             .store_bytes(self.account_addr)\
             .store_uint(self.lt, 64)\
             .store_bytes(self.prev_trans_hash)\
-            .store_uint(self.prev_trans_lt)\
+            .store_uint(self.prev_trans_lt, 64)\
             .store_uint(self.now, 32)\
             .store_uint(self.outmsg_cnt, 15)\
             .store_cell(self.orig_status.serialize())\
@@ -93,8 +93,9 @@ class Transaction(TlbScheme):
             )\
             .store_cell(self.total_fees.serialize())\
             .store_ref(self.state_update.serialize())\
-            .store_ref(self.description.serialize())
-            # TODO description serialization
+            .store_ref(TransactionDescr.serialize(self.description))
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -362,9 +363,18 @@ class AccStatusChange(TlbScheme):
     def __init__(self, type_: typing.Literal["unchanged", "frozen", "deleted"]):
         self.type_ = type_
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+        if self.type_ == 'unchanged':
+            builder.store_bits("0")
+        elif self.type_ == 'frozen':
+            builder.store_bits("10")
+        elif self.type_ == 'deleted':
+            builder.store_bits("11")
+        else:
+            raise ValueError("Invalid status type")
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -387,9 +397,24 @@ class ComputeSkipReason(TlbScheme):
     def __init__(self, type_: typing.Literal["no_state", "bad_state", "no_gas", "suspended"]):
         self.type_ = type_
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        """
+        Serialize the skip reason using specific binary encoding.
+        """
+        builder = Builder()
+
+        if self.type_ == 'no_state':
+            builder.store_bits("00")
+        elif self.type_ == 'bad_state':
+            builder.store_bits("01")
+        elif self.type_ == 'no_gas':
+            builder.store_bits("10")
+        elif self.type_ == 'suspended':
+            builder.store_bits("110")
+        else:
+            raise ValueError("Unknown compute skip reason type.")
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -425,9 +450,19 @@ class TrStoragePhase(TlbScheme):
         self.storage_fees_due = storage_fees_due
         self.status_change = status_change
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        builder.store_coins(self.storage_fees_collected)
+        if self.storage_fees_due is not None:
+            builder.store_bit(True)
+            builder.store_coins(self.storage_fees_due)
+        else:
+            builder.store_bit(False)
+
+        builder.store_cell(self.status_change.serialize())
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -450,9 +485,18 @@ class TrCreditPhase(TlbScheme):
         self.due_fees_collected = due_fees_collected
         self.credit = credit
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        if self.due_fees_collected is not None:
+            builder.store_bit(True)
+            builder.store_coins(self.due_fees_collected)
+        else:
+            builder.store_bit(False)
+
+        builder.store_cell(self.credit.serialize())
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -511,9 +555,46 @@ class TrComputePhase(TlbScheme):
         self.vm_init_state_hash = vm_init_state_hash
         self.vm_final_state_hash = vm_final_state_hash
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        if self.type_ == 'skipped':
+            builder.store_bit(False)
+            builder.store_cell(self.reason.serialize())
+            return builder.end_cell()
+
+        builder.store_bit(True)
+        builder.store_bool(self.success)
+        builder.store_bool(self.msg_state_used)
+        builder.store_bool(self.account_activated)
+        builder.store_coins(self.gas_fees)
+
+        ref_builder = Builder()
+        ref_builder.store_var_uint(self.gas_used, 3)  # int(7).bit_length()
+        ref_builder.store_var_uint(self.gas_limit, 3)  # int(7).bit_length()
+
+        if self.gas_credit is not None:
+            ref_builder.store_bit(True)
+            ref_builder.store_var_uint(self.gas_credit, 2)
+        else:
+            ref_builder.store_bit(False)
+
+        ref_builder.store_int(self.mode, 8)
+        ref_builder.store_int(self.exit_code, 32)
+
+        if self.exit_arg is not None:
+            ref_builder.store_bit(True)
+            ref_builder.store_int(self.exit_arg, 32)
+        else:
+            ref_builder.store_bit(False)
+
+        ref_builder.store_uint(self.vm_steps, 32)
+        ref_builder.store_bytes(self.vm_init_state_hash)
+        ref_builder.store_bytes(self.vm_final_state_hash)
+
+        builder.store_ref(ref_builder.end_cell())
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -604,9 +685,42 @@ class TrActionPhase(TlbScheme):
         self.action_list_hash = action_list_hash
         self.tot_msg_size = tot_msg_size
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        builder.store_bool(self.success)
+        builder.store_bool(self.valid)
+        builder.store_bool(self.no_funds)
+        builder.store_cell(self.status_change.serialize())
+
+        if self.total_fwd_fees is not None:
+            builder.store_bit(True)
+            builder.store_coins(self.total_fwd_fees)
+        else:
+            builder.store_bit(False)
+
+        if self.total_action_fees is not None:
+            builder.store_bit(True)
+            builder.store_coins(self.total_action_fees)
+        else:
+            builder.store_bit(False)
+
+        builder.store_int(self.result_code, 32)
+
+        if self.result_arg is not None:
+            builder.store_bit(True)
+            builder.store_int(self.result_arg, 32)
+        else:
+            builder.store_bit(False)
+
+        builder.store_uint(self.tot_actions, 16)
+        builder.store_uint(self.spec_actions, 16)
+        builder.store_uint(self.skipped_actions, 16)
+        builder.store_uint(self.msgs_created, 16)
+        builder.store_bytes(self.action_list_hash)
+        builder.store_cell(self.tot_msg_size.serialize())
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -656,9 +770,22 @@ class TrBouncePhase(TlbScheme):
         self.msg_fees = msg_fees
         self.fwd_fees = fwd_fees
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        if self.type_ == 'negfunds':
+            builder.store_bits("00")
+        elif self.type_ == 'nofunds':
+            builder.store_bits("01")
+            builder.store_cell(self.msg_size.serialize())
+            builder.store_coins(self.req_fwd_fees)
+        elif self.type_ == 'ok':
+            builder.store_bits("1")
+            builder.store_cell(self.msg_size.serialize())
+            builder.store_coins(self.msg_fees)
+            builder.store_coins(self.fwd_fees)
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -714,8 +841,28 @@ class TransactionDescr(TlbScheme):
         ...
 
     @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(cls, instance):
+        builder = Builder()
+        if instance.type_ == 'tick_tock':
+            builder.store_bits('001')
+        elif instance.type_ == 'ordinary':
+            builder.store_bits('0000')
+        elif instance.type_ == 'storage':
+            builder.store_bits('0001')
+        elif instance.type_ == 'split_prepare':
+            builder.store_bits('0100')
+        elif instance.type_ == 'split_install':
+            builder.store_bits('0101')
+        elif instance.type_ == 'merge_prepare':
+            builder.store_bits('0110')
+        elif instance.type_ == 'merge_install':
+            builder.store_bits('0111')
+        else:
+            raise TransactionError(f"Unknown transaction type: {instance.type_}")
+
+        builder.store_cell(instance.serialize())
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -766,8 +913,42 @@ class TransactionOrdinary(TlbScheme):
         self.bounce = bounce
         self.destroyed = destroyed
 
-    def serialize(self):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        builder.store_bool(self.credit_first)
+
+        if self.storage_ph is not None:
+            builder.store_bit(True)
+            builder.store_cell(self.storage_ph.serialize())
+        else:
+            builder.store_bit(False)
+
+        if self.credit_ph is not None:
+            builder.store_bit(True)
+            builder.store_cell(self.credit_ph.serialize())
+        else:
+            builder.store_bit(False)
+
+        builder.store_cell(self.compute_ph.serialize())
+
+        if self.action is not None:
+            builder.store_bit(True)
+            builder.store_ref(self.action.serialize())
+        else:
+            builder.store_bit(False)
+
+        builder.store_bit(self.aborted)
+
+        if self.bounce is not None:
+            builder.store_bit(True)
+            builder.store_cell(self.bounce.serialize())
+        else:
+            builder.store_bit(False)
+
+        builder.store_bit(self.destroyed)
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
