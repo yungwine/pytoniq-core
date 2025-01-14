@@ -321,7 +321,7 @@ class ExtraCurrencyCollection(TlbScheme):
         self.dict = dict_
 
     def serialize(self) -> Cell:
-        dict_cell = HashMap(32, value_serializer=lambda src, dest: dest.store_uint(src, 32)).serialize()
+        dict_cell = HashMap(32, map_=self.dict, value_serializer=lambda src, dest: dest.store_var_uint(src, 5)).serialize()
         return Builder().store_dict(dict_cell).end_cell()
 
     @classmethod
