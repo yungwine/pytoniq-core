@@ -268,7 +268,7 @@ class Slice(NullCell):
         return cells[0].begin_parse()
 
     def copy(self):
-        return Slice(self.bits.copy(), self.refs.copy(), self.type_)
+        return Slice(self.bits.copy(), self.refs[self.ref_offset:], self.type_)
 
     def __repr__(self) -> str:
         return f'<Slice {len(self.bits)}[{self.bits.tobytes().hex().upper()}] -> {len(self.refs) - self.ref_offset} refs>'

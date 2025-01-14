@@ -1,5 +1,6 @@
 import pytest
 
+from pytoniq_core import Cell
 from pytoniq_core.boc import Builder, begin_cell, Slice, Address
 
 
@@ -64,3 +65,12 @@ def test_var_ints():
     assert begin_cell().store_var_int(1, 1).to_slice().load_var_int(1) == 1
     assert begin_cell().store_var_int(1, 1).to_slice().preload_var_int(1) == 1
 
+def test_copy():
+    c = begin_cell().store_uint(15, 32).store_ref(Cell.empty()).end_cell()
+
+    cs = c.begin_parse()
+    cs.skip_bits(10)
+    cs.load_ref()
+    cs2 = cs.copy()
+    assert cs2.remaining_refs == 0
+    assert cs2.remaining_bits == 22
