@@ -95,21 +95,38 @@ class Account(TlbScheme):
     account$1 addr:MsgAddressInt storage_stat:StorageInfo storage:AccountStorage = Account;
     """
 
-    def __init__(self, addr: Address, storage_stat: "StorageInfo", storage: "AccountStorage"):
+    def __init__(self, type_: typing.Literal["account_none", "account"],
+                addr: typing.Optional[Address] = None,
+                storage_stat: typing.Optional["StorageInfo"] = None,
+                storage: typing.Optional["AccountStorage"] = None):
+        self.type_ = type_
         self.addr = addr
         self.storage_stat = storage_stat
         self.storage = storage
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        if self.type_ == "account_none":
+            builder.store_bit(0)
+        elif self.type_ == "account":
+            assert self.addr is not None
+            assert self.storage_stat is not None
+            assert self.storage is not None
+
+            builder.store_bit(1)
+            builder.store_address(self.addr)
+            builder.store_slice(self.storage_stat.serialize().begin_parse())
+            builder.store_slice(self.storage.serialize().begin_parse())
+        
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         if cell_slice.load_bit():
-            return cls(cell_slice.load_address(), StorageInfo.deserialize(cell_slice), AccountStorage.deserialize(cell_slice))
+            return cls("account", cell_slice.load_address(), StorageInfo.deserialize(cell_slice), AccountStorage.deserialize(cell_slice))
         else:
-            return None
+            return Account(type_ = "account_none")
 
 
 class StorageInfo(TlbScheme):
@@ -123,9 +140,18 @@ class StorageInfo(TlbScheme):
         self.last_paid = last_paid
         self.due_payment = due_payment
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder() \
+            .store_slice(self.used.serialize().begin_parse()) \
+            .store_uint(self.last_paid, 32)
+        
+        if self.due_payment is not None:
+            builder.store_bit(1)
+            builder.store_coins(self.due_payment)
+        else:
+            builder.store_bit(0)
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -143,9 +169,13 @@ class StorageUsed(TlbScheme):
         self.bits = bits
         self.public_cells = public_cells
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder() \
+            .store_var_uint(self.cells, 3) \
+            .store_var_uint(self.bits, 3) \
+            .store_var_uint(self.public_cells, 3)
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -185,9 +215,13 @@ class AccountStorage(TlbScheme):
         self.balance: CurrencyCollection = balance
         self.state = state
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder() \
+            .store_uint(self.last_trans_lt, 64) \
+            .store_slice(self.balance.serialize().begin_parse()) \
+            .store_slice(self.state.serialize().begin_parse())
+
+        return builder.end_cell() 
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -213,9 +247,20 @@ class AccountState(TlbScheme):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        builder = Builder()
+
+        if self.type_ == "account_uninit":
+            builder.store_bits([0, 0])
+        elif self.type_ == "account_active":
+            builder.store_bits([1])
+            builder.store_slice(self.state_init.serialize().begin_parse())
+        elif self.type_ == "account_frozen":
+            assert len(self.state_hash) == 64 # bytes are stored in hex ...
+            builder.store_bits([0, 1])
+            builder.store_bytes(bytes.fromhex(self.state_hash))
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
@@ -300,9 +345,15 @@ class ShardAccount(TlbScheme):
         self.last_trans_lt = last_trans_lt
         self.cell = cell  # to check merkle proof of account states
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self) -> Cell:
+        assert len(self.last_trans_hash) == 32
+
+        builder = Builder() \
+            .store_ref(self.account.serialize()) \
+            .store_bytes(self.last_trans_hash) \
+            .store_uint(self.last_trans_lt, 64)
+
+        return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
