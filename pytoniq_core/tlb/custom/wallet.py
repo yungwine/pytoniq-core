@@ -110,6 +110,55 @@ class HighloadWalletData(TlbScheme):
         return cls(wallet_id=cell_slice.load_uint(32), last_cleaned=cell_slice.load_uint(64), public_key=cell_slice.load_bytes(32), old_queries=cell_slice.load_dict(key_length=64, value_deserializer=cls.old_queries_deserializer))
 
 
+class HighloadWalletV3Data(TlbScheme):
+
+    """
+    storage$_ public_key:bits256 subwallet_id:uint32 old_queries:(HashmapE 14 ^Cell)
+              queries:(HashmapE 14 ^Cell) last_clean_time:uint64 timeout:uint22 = Storage;
+    """
+
+    def __init__(
+            self,
+            public_key: typing.Optional[bytes] = None,
+            wallet_id: typing.Optional[int] = None,
+            old_queries: typing.Optional[dict] = None,
+            queries: typing.Optional[dict] = None,
+            last_clean_time: typing.Optional[int] = None,
+            timeout: int = None,
+    ) -> None:
+        self.public_key = public_key
+        if wallet_id is None:
+            wallet_id = 0x10ad
+        self.wallet_id = wallet_id
+        self.old_queries = old_queries
+        self.queries = queries
+        self.last_clean_time = last_clean_time
+        self.timeout = timeout
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder\
+            .store_bytes(self.public_key) \
+            .store_uint(self.wallet_id, 32) \
+            .store_dict(HashMap(key_size=13, map_=self.old_queries).serialize()) \
+            .store_dict(HashMap(key_size=13, map_=self.queries).serialize()) \
+            .store_uint(self.last_clean_time, 64) \
+            .store_uint(self.timeout, 22)
+
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        return cls(
+            public_key=cell_slice.load_bytes(32),
+            wallet_id=cell_slice.load_uint(32),
+            old_queries=cell_slice.load_dict(key_length=13),
+            queries=cell_slice.load_dict(key_length=13),
+            last_clean_time=cell_slice.load_uint(64),
+            timeout=cell_slice.load_uint(22)
+        )
+
+
 class WalletMessage(TlbScheme):
     """
     wallet_message$_ send_mode:uint8 message:^MessageAny = WalletMessage;
