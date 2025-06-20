@@ -111,6 +111,8 @@ class Slice(NullCell):
             return None
         elif tag == 1:
             len_ = self.load_uint(9)
+            if len_ == 0:
+                return None
             return ExternalAddress(self.load_uint(len_), len_)
         # todo: addr_var
         is_anycast = False
