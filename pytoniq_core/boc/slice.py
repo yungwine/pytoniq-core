@@ -91,7 +91,7 @@ class Slice(NullCell):
             return None
         if rem == 1:
             len_ = int(self.preload_bits(11)[2:].to01(), 2)
-            addr = int(self.preload_bits(11 + len_)[11:].to01(), 2)
+            addr = int(self.preload_bits(11 + len_)[11:].to01(), 2) if len_ > 0 else None
             return ExternalAddress(addr, len_)
         if rem != 2:
             raise SliceError('Unsupported address type')
@@ -111,7 +111,10 @@ class Slice(NullCell):
             return None
         elif tag == 1:
             len_ = self.load_uint(9)
-            return ExternalAddress(self.load_uint(len_), len_)
+            addr = None
+            if len_ != 0:
+                addr = self.load_uint(len_)
+            return ExternalAddress(addr, len_)
         # todo: addr_var
         is_anycast = False
         if self.load_bool():

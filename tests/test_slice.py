@@ -1,7 +1,7 @@
 import pytest
 
-from pytoniq_core import Cell
-from pytoniq_core.boc import Builder, begin_cell, Slice, Address
+from pytoniq_core import Cell, MessageAny, ExternalAddress
+from pytoniq_core.boc import begin_cell, Slice, Address
 
 
 def test_boc():
@@ -65,6 +65,7 @@ def test_var_ints():
     assert begin_cell().store_var_int(1, 1).to_slice().load_var_int(1) == 1
     assert begin_cell().store_var_int(1, 1).to_slice().preload_var_int(1) == 1
 
+
 def test_copy():
     c = begin_cell().store_uint(15, 32).store_ref(Cell.empty()).end_cell()
 
@@ -74,3 +75,25 @@ def test_copy():
     cs2 = cs.copy()
     assert cs2.remaining_refs == 0
     assert cs2.remaining_bits == 22
+
+
+def test_empty_ext_addr():
+
+    a = ExternalAddress(address=None, length=0)
+    assert a.external_address is None
+    assert a.len == 0
+    assert str(a) == 'ExternalAddress<None>'
+
+    a1 = a.to_cell().begin_parse().load_address()
+    assert a1.external_address is None
+    assert a1.len == 0
+
+    a2 = a.to_cell().begin_parse().preload_address()
+    assert a2.external_address is None
+    assert a2.len == 0
+
+    # message example with empty external address from mainnet
+    m = MessageAny.deserialize(Slice.one_from_boc('b5ee9c720101030100a700015fe0077b12d86ad2f15a1a2fc0ec1115b1706f3904f0588f0158b5a589638cc21b8c520000003532342cfb0568541a68600101dd0000500161f5ebc497e0bf46b6a53a0bae46aa04018006d01aeeec276b151a419bf14e6354acbc6e9fc144b9221b5ddccb4966ea005690018a2e1c7e316821626399dcf1778c38e7f12901c17d5d2bbe8afc2130c2981f280000000400040000000000000003fffffffd02faf08020020000'))
+    assert m.info.dest.external_address is None
+    assert m.info.dest.len == 0
+

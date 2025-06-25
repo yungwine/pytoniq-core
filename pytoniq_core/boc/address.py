@@ -141,16 +141,15 @@ class ExternalAddress:
 
     def to_cell(self):
         from .builder import Builder
-        if self.external_address is None:
-            return Builder().store_bits('00').end_cell()
-        return (Builder()
+        b = (Builder()
                 .store_bits('01')
-                .store_uint(self.len, 9)
-                .store_uint(self.external_address, self.len)
-                .end_cell())
+                .store_uint(self.len, 9))
+        if self.external_address is not None:
+            b.store_uint(self.external_address, self.len)
+        return b.end_cell()
 
     def __repr__(self):
-        if self.len is not None:
+        if self.len != 0:
             return f'ExternalAddress<{hex(self.external_address)}>'
         return f'ExternalAddress<{self.external_address}>'
 
