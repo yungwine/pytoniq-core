@@ -412,6 +412,7 @@ class WorkchainDescr(TlbScheme):
     zerostate_root_hash:bits256 zerostate_file_hash:bits256
     version:uint32 format:(WorkchainFormat basic)
     split_merge_timings:WcSplitMergeTimings
+    persistent_state_split_depth:(## 8) { persistent_state_split_depth <= 63 }
     = WorkchainDescr;
     """
 
@@ -429,7 +430,8 @@ class WorkchainDescr(TlbScheme):
                  zerostate_file_hash: bytes,
                  version: int,
                  format: WorkchainFormat,
-                 split_merge_timings: typing.Optional[WcSplitMergeTimings] = None
+                 split_merge_timings: typing.Optional[WcSplitMergeTimings] = None,
+                 persistent_state_split_depth: typing.Optional[int] = None,
                  ):
         self.type_ = type_
         self.enabled_since = enabled_since
@@ -445,6 +447,7 @@ class WorkchainDescr(TlbScheme):
         self.version = version
         self.format = format
         self.split_merge_timings = split_merge_timings
+        self.persistent_state_split_depth = persistent_state_split_depth
 
     @classmethod
     def serialize(cls, *args):
@@ -470,7 +473,12 @@ class WorkchainDescr(TlbScheme):
         version = cell_slice.load_uint(32)
         format = WorkchainFormat.deserialize(cell_slice, basic)
         type_ = 'workchain' if tag == b'\xa6' else 'workchain_v2'
-        split_merge_timings = WcSplitMergeTimings.deserialize(cell_slice) if type_ == 'workchain_v2' else None
+        split_merge_timings = None
+        persistent_state_split_depth = None
+        if type_ == 'workchain_v2':
+            split_merge_timings = WcSplitMergeTimings.deserialize(cell_slice)
+            persistent_state_split_depth = cell_slice.load_uint(8)
+            assert persistent_state_split_depth <= 63
         return cls(
             type_=type_,
             enabled_since=enabled_since,
@@ -486,6 +494,7 @@ class WorkchainDescr(TlbScheme):
             version=version,
             format=format,
             split_merge_timings=split_merge_timings,
+            persistent_state_split_depth=persistent_state_split_depth
         )
 
 
