@@ -209,9 +209,9 @@ class StorageUsedShort(TlbScheme):
         self.cells = cells
         self.bits = bits
 
-    @classmethod
-    def serialize(cls, *args):
-        pass
+    def serialize(self):
+        l = 3  # int(7).bit_length()
+        return Builder().store_var_uint(self.cells, l).store_var_uint(self.bits, l)
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
