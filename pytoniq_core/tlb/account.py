@@ -118,18 +118,20 @@ class Account(TlbScheme):
 
 class StorageInfo(TlbScheme):
     """
-    storage_info$_ used:StorageUsed last_paid:uint32
+    storage_info$_ used:StorageUsed storage_extra:StorageExtraInfo last_paid:uint32
               due_payment:(Maybe Grams) = StorageInfo;
     """
 
-    def __init__(self, used: "StorageUsed", last_paid: int, due_payment: typing.Optional[int]):
+    def __init__(self, used: "StorageUsed", storage_extra: "StorageExtraInfo", last_paid: int, due_payment: typing.Optional[int]):
         self.used = used
         self.last_paid = last_paid
+        self.storage_extra = storage_extra
         self.due_payment = due_payment
 
     def serialize(self) -> Cell:
         builder = Builder() \
             .store_cell(self.used.serialize()) \
+            .store_cell(self.storage_extra.serialize()) \
             .store_uint(self.last_paid, 32)
         if self.due_payment is not None:
             builder.store_bit(1)
@@ -140,32 +142,62 @@ class StorageInfo(TlbScheme):
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
-        return cls(StorageUsed.deserialize(cell_slice), cell_slice.load_uint(32), cell_slice.load_coins() if cell_slice.load_bit() else None)
+        return cls(StorageUsed.deserialize(cell_slice), StorageExtraInfo.deserialize(cell_slice), cell_slice.load_uint(32), cell_slice.load_coins() if cell_slice.load_bit() else None)
+
+
+class StorageExtraInfo(TlbScheme):
+    """
+    storage_extra_none$000 = StorageExtraInfo;
+    storage_extra_info$001 dict_hash:uint256 = StorageExtraInfo;
+    """
+
+    def __init__(self, type_: typing.Literal["storage_extra_none", "storage_extra_info"], dict_hash: bytes = None):
+        self.type_ = type_
+        self.dict_hash = dict_hash
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        if self.type_ == "storage_extra_none":
+            builder.store_uint(0, 3)
+        elif self.type_ == "storage_extra_info":
+            builder.store_uint(1, 3)
+            builder.store_bytes(self.dict_hash)
+        else:
+            raise TlbError(f"Unknown StorageExtraInfo type: {self.type_}")
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        tag = cell_slice.load_uint(3)
+        if tag == 0:  # 000: storage_extra_none
+            return cls(type_="storage_extra_none")
+        elif tag == 1:  # 001: storage_extra_info
+            dict_hash = cell_slice.load_bytes(32)
+            return cls(type_="storage_extra_info", dict_hash=dict_hash)
+        else:
+            raise TlbError(f"Unknown StorageExtraInfo tag: {tag}")
 
 
 class StorageUsed(TlbScheme):
     """
-    storage_used$_ cells:(VarUInteger 7) bits:(VarUInteger 7)
-    public_cells:(VarUInteger 7) = StorageUsed;
+    storage_used$_ cells:(VarUInteger 7) bits:(VarUInteger 7) = StorageUsed;
     """
 
-    def __init__(self, cells, bits, public_cells):
+    def __init__(self, cells, bits, *args, **kwargs):
         self.cells = cells
         self.bits = bits
-        self.public_cells = public_cells
+        self.public_cells = None  # for backward compatibility
 
     def serialize(self) -> Cell:
         builder = Builder() \
             .store_var_uint(self.cells, 3) \
-            .store_var_uint(self.bits, 3) \
-            .store_var_uint(self.public_cells, 3)
-
+            .store_var_uint(self.bits, 3)
         return builder.end_cell()
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         l = 3  # int(7).bit_length()
-        return cls(cell_slice.load_var_uint(l), cell_slice.load_var_uint(l), cell_slice.load_var_uint(l),)
+        return cls(cell_slice.load_var_uint(l), cell_slice.load_var_uint(l))
 
 
 class StorageUsedShort(TlbScheme):
