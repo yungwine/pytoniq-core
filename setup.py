@@ -29,5 +29,8 @@ setuptools.setup(
         "x25519>=0.0.2",
         "setuptools>=65.5.1",
         "PyNaCl>=1.5.0"
-    ]
+    ],
+    package_data={
+        "": ["*py.typed"],
+    },
 )
