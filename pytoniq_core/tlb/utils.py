@@ -78,3 +78,21 @@ def deserialize_shard_hashes(cell_slice: Slice):
 
 def uint64_to_int64(num: int):
     return (num & ((1 << 63) - 1)) - (num & (1 << 63))
+
+
+def generate_wallet_id(
+    wallet_id: typing.Optional[int] = 0,
+    workchain: typing.Optional[int] = 0,
+    network_global_id: typing.Optional[int] = -239,
+    wallet_version: typing.Optional[int] = 0,
+) -> int:
+    """
+    https://github.com/ton-org/ton/blob/e6ba9c39a029d99c885cd55523bf617137f20808/src/wallets/v5r1/WalletV5R1WalletId.ts#L11
+    """
+    ctx = 0
+    ctx |= 1 << 31
+    ctx |= (workchain & 0xFF) << 23
+    ctx |= (wallet_version & 0xFF) << 15
+    ctx |= (wallet_id & 0xFFFF)
+
+    return ctx ^ (network_global_id & 0xFFFFFFFF)

@@ -2,6 +2,7 @@ import typing
 
 from ..tlb import TlbScheme
 from ..transaction import MessageAny
+from ..utils import generate_wallet_id
 from ...boc import Cell, Builder, Slice, HashMap
 
 
@@ -67,6 +68,55 @@ class WalletV4Data(TlbScheme):
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         return cls(seqno=cell_slice.load_uint(32), wallet_id=cell_slice.load_uint(32), public_key=cell_slice.load_bytes(32), plugins=cell_slice.load_maybe_ref())
+
+
+class WalletV5Data(TlbScheme):
+    """
+    contract_state$_ is_signature_allowed:(## 1) seqno:# wallet_id:(## 32) public_key:(## 256) extensions_dict:(HashmapE 256 int1) = ContractState;
+    """
+    def __init__(
+        self,
+        is_signature_allowed: typing.Optional[bool] = True,
+        seqno: typing.Optional[int] = 0,
+        network_global_id: typing.Optional[int] = -239,
+        wallet_id: typing.Optional[int] = None,
+        public_key: typing.Optional[bytes] = None,
+        extensions_dict: typing.Optional[Cell] = None,
+    ):
+        self.is_signature_allowed = is_signature_allowed
+        self.seqno = seqno
+        if wallet_id is None:
+            wallet_id = generate_wallet_id(
+                wallet_id=wallet_id or 0,
+                workchain=0,
+                wallet_version=0,
+                network_global_id=network_global_id,
+            )
+        self.wallet_id = wallet_id
+        if public_key is None:
+            raise Exception('Public Key required for Wallet!')
+        self.public_key = public_key
+        self.extensions_dict = extensions_dict
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder\
+            .store_bool(self.is_signature_allowed)\
+            .store_uint(self.seqno, 32)\
+            .store_uint(self.wallet_id, 32)\
+            .store_bytes(self.public_key)\
+            .store_bool(False)
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice) -> typing.Self:
+        return cls(
+            is_signature_allowed=cell_slice.load_bool(),
+            seqno=cell_slice.load_uint(32),
+            wallet_id=cell_slice.load_uint(32),
+            public_key=cell_slice.load_bytes(32),
+            extensions_dict=cell_slice.load_maybe_ref(),
+        )
 
 
 class HighloadWalletData(TlbScheme):
