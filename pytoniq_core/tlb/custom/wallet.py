@@ -2,6 +2,7 @@ import typing
 
 from ..tlb import TlbScheme
 from ..transaction import MessageAny
+from ..utils import WalletV5WalletID
 from ...boc import Cell, Builder, Slice, HashMap
 
 
@@ -67,6 +68,45 @@ class WalletV4Data(TlbScheme):
     @classmethod
     def deserialize(cls, cell_slice: Slice):
         return cls(seqno=cell_slice.load_uint(32), wallet_id=cell_slice.load_uint(32), public_key=cell_slice.load_bytes(32), plugins=cell_slice.load_maybe_ref())
+
+
+class WalletV5R1Data(TlbScheme):
+    """
+    wallet_v5r1_data#_ is_signature_allowed:Bool seqno:uint32 wallet_id:uint32
+                       public_key:bits256 extensions:(Maybe ^Cell) = WalletV5R1Data;
+    """
+    def __init__(self,
+                 seqno: typing.Optional[int] = 0,
+                 public_key: typing.Optional[bytes] = None,
+                 wallet_id: typing.Optional[WalletV5WalletID] = None,
+                 extensions: typing.Optional[Cell] = None,
+                 is_signature_allowed: bool = True,
+                 ):
+        self.public_key = public_key
+        self.seqno = seqno
+        self.wallet_id = wallet_id
+        self.extensions = extensions
+        self.is_signature_allowed = is_signature_allowed
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder \
+            .store_bool(self.is_signature_allowed) \
+            .store_uint(self.seqno, 32) \
+            .store_uint(self.wallet_id.pack(), 32) \
+            .store_bytes(self.public_key) \
+            .store_dict(self.extensions)
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice, network_global_id: int):
+        is_signature_allowed = cell_slice.load_bool()
+        seqno = cell_slice.load_uint(32)
+        wallet_id = cell_slice.load_uint(32)
+        wallet_id = WalletV5WalletID.unpack(wallet_id, network_global_id)
+        public_key = cell_slice.load_bytes(32)
+        extensions = cell_slice.load_maybe_ref()
+        return cls(is_signature_allowed=is_signature_allowed, seqno=seqno, wallet_id=wallet_id, public_key=public_key, extensions=extensions)
 
 
 class HighloadWalletData(TlbScheme):
