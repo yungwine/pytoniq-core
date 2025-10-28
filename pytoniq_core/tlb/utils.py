@@ -100,7 +100,7 @@ class WalletV5WalletID:
         ctx |= 1 << 31
         ctx |= (self.workchain & 0xFF) << 23
         ctx |= (self.version & 0xFF) << 15
-        ctx |= self.subwallet_number & 0xFFFF
+        ctx |= self.subwallet_number & 0x7FFF
         return ctx ^ (self.network_global_id & 0xFFFFFFFF)
 
     @classmethod
@@ -109,11 +109,12 @@ class WalletV5WalletID:
         value: int,
         network_global_id: int,
     ) -> "WalletV5WalletID":
-        ctx = value ^ (network_global_id & 0xFFFFFFFF)
+        ctx = (value ^ network_global_id) & 0xFFFFFFFF
 
-        subwallet_number = ctx & 0xFFFF
+        subwallet_number = ctx & 0x7FFF
         version = (ctx >> 15) & 0xFF
-        workchain = (ctx >> 23) & 0xFF
+        wc_u8 = (ctx >> 23) & 0xFF
+        workchain = (wc_u8 ^ 0x80) - 0x80
 
         return cls(
             subwallet_number=subwallet_number,
