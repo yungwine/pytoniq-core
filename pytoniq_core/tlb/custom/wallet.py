@@ -69,6 +69,44 @@ class WalletV4Data(TlbScheme):
         return cls(seqno=cell_slice.load_uint(32), wallet_id=cell_slice.load_uint(32), public_key=cell_slice.load_bytes(32), plugins=cell_slice.load_maybe_ref())
 
 
+class WalletV5R1Data(TlbScheme):
+    """
+    wallet_v5r1_data#_ is_signature_allowed:(## 1) seqno:# wallet_id:(## 32)
+                       public_key:(## 256) extensions_dict:(HashmapE 256 int1) = WalletV5R1Data;
+    """
+    def __init__(self,
+                 is_signature_allowed: bool = True,
+                 seqno: typing.Optional[int] = 0,
+                 wallet_id: typing.Optional[int] = None,
+                 public_key: typing.Optional[bytes] = None,
+                 extensions: typing.Optional[Cell] = None,
+                 ):
+        self.is_signature_allowed = is_signature_allowed
+        self.public_key = public_key
+        self.seqno = seqno
+        self.wallet_id = wallet_id
+        self.extensions = extensions
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder \
+            .store_bool(self.is_signature_allowed) \
+            .store_uint(self.seqno, 32) \
+            .store_uint(self.wallet_id, 32) \
+            .store_bytes(self.public_key) \
+            .store_dict(self.extensions)
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        is_signature_allowed = cell_slice.load_bool()
+        seqno = cell_slice.load_uint(32)
+        wallet_id = cell_slice.load_uint(32)
+        public_key = cell_slice.load_bytes(32)
+        extensions = cell_slice.load_maybe_ref()
+        return cls(is_signature_allowed=is_signature_allowed, seqno=seqno, wallet_id=wallet_id, public_key=public_key, extensions=extensions)
+
+
 class HighloadWalletData(TlbScheme):
     """
     highload_wallet_data#_ wallet_id:uint32 last_cleaned:uint64 public_key:bits256 old_queries:(HashmapE 64 WalletMessage) = HighloadWalletData;
