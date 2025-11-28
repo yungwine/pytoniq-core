@@ -1,1 +1,2 @@
 include pytoniq_core/tl/schemas/*
+include pytoniq_core/py.typed
