@@ -66,6 +66,8 @@ def check_shard_proof(shard_proof: bytes, blk: BlockIdExt, shrd_blk: BlockIdExt)
         raise ProofError('mc state hashes mismatch')
 
     shard = ShardStateUnsplit.deserialize(mc_state_root[0].begin_parse())
+    if shard is None or shard.custom is None:
+        raise ProofError('invalid masterchain state in shard proof')
 
     shard_dict = shard.custom.shard_hashes
 
@@ -97,6 +99,8 @@ def check_account_proof(proof: bytes, shrd_blk: BlockIdExt, address: "Address", 
         raise ProofError('state hashes mismatch')
 
     shard = ShardStateUnsplit.deserialize(state_cell[0].begin_parse())
+    if shard is None or not isinstance(shard.accounts, tuple):
+        raise ProofError('invalid shard state in account state proof')
 
     shard_account = shard.accounts[0][int.from_bytes(address.hash_part, 'big')]
 
@@ -116,9 +120,7 @@ def calculate_node_id_short(pub_key: bytes):
 
 
 def check_block_signatures(nodes: typing.List[ValidatorDescr], signatures: typing.List[dict], blk: BlockIdExt):
-    from ..tlb.config import ValidatorDescr
-
-    node_map = {}
+    node_map: typing.Dict[bytes, ValidatorDescr] = {}
 
     total_weight = 0
     signed_weight = 0
@@ -133,7 +135,6 @@ def check_block_signatures(nodes: typing.List[ValidatorDescr], signatures: typin
     i = 0
     for sig in signatures:
         node = node_map.get(bytes.fromhex(sig['node_id_short']))
-        node: ValidatorDescr
         i += 1
 
         if node is None:
@@ -152,7 +153,7 @@ def check_block_signatures(nodes: typing.List[ValidatorDescr], signatures: typin
     raise ProofError(f'Block {blk} has not been signed by 2/3 of validators')
 
 
-def compute_validator_set(ccv_conf: CatchainConfig, blk: BlockIdExt, vset: ValidatorSet, cc_seqno: int = None):
+def compute_validator_set(ccv_conf: CatchainConfig, blk: BlockIdExt, vset: ValidatorSet, cc_seqno: typing.Optional[int] = None):
     is_mc = blk.workchain == -1
 
     if is_mc:

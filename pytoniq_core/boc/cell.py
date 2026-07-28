@@ -237,7 +237,7 @@ class Cell(NullCell):
 
         absent = b'\x00' * cells_len
 
-        result = bytearray(b'\xb5\xee\x9cr') + \
+        result: bytearray = bytearray(b'\xb5\xee\x9cr') + \
                  flags + \
                  payload_len.to_bytes(1, 'big') + \
                  cells_num.to_bytes(cells_len, 'big') + \
@@ -287,7 +287,9 @@ class Cell(NullCell):
         """
         return self.refs[ref_i]
 
-    def __eq__(self, other: "Cell") -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Cell):
+            return NotImplemented
         return self._hash == other.hash
 
     def __repr__(self) -> str:

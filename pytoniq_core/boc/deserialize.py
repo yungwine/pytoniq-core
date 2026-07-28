@@ -5,9 +5,14 @@ import typing
 
 from bitarray.util import ba2int
 
-from .tvm_bitarray import bitarray, TvmBitarray
+from .tvm_bitarray import bitarray, TvmBitarray, BitarrayLike
 from .utils import bytes_to_uint
 from ..crypto.crc import crc32c
+
+if typing.TYPE_CHECKING:
+    from .builder import Builder
+    from .cell import Cell
+    from .slice import Slice
 
 
 class BocError(Exception):
@@ -25,31 +30,31 @@ class NullCell:
     NullCell is a class that stores cell bits, and refs to other NullCells.
     This class needed to deserialize boc (bag of cells) and convert it into Cell, Builder or Slice
     """
-    def __init__(self, bits: TvmBitarray, refs: list, type_: int):
+    def __init__(self, bits: BitarrayLike, refs: list, type_: int):
         self.bits = bits
         self.refs = refs
         self.type_ = type_
 
-    def to_cell(self):
+    def to_cell(self) -> "Cell":
         from .cell import Cell
         if isinstance(self, Cell):
             raise Exception('Cant convert Cell to Cell. Maybe you need .copy()?')
         raise NotImplementedError
 
-    def to_slice(self):
+    def to_slice(self) -> "Slice":
         from .slice import Slice
         if isinstance(self, Slice):
             raise Exception('Cant convert Slice to Slice. Maybe you need .copy()?')
         raise NotImplementedError
 
-    def to_builder(self):
+    def to_builder(self) -> "Builder":
         from .builder import Builder
         if isinstance(self, Builder):
             raise Exception('Cant convert Builder to Builder. Maybe you need .copy()?')
         raise NotImplementedError
 
     @abstractmethod
-    def copy(self):
+    def copy(self) -> "NullCell":
         ...
 
     def __repr__(self) -> str:
@@ -225,7 +230,7 @@ class Boc:
 
         return cell, i
 
-    def deserialize(self, cls: type = None):
+    def deserialize(self, cls: typing.Optional[type] = None):
         if not cls:
             from .cell import Cell
             cls = Cell

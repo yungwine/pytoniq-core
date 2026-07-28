@@ -19,15 +19,15 @@ class AddressError(Exception):
 
 class Address:
 
-    def __init__(self, address):
+    def __init__(self, address: typing.Union[str, typing.Tuple[int, bytes], "Address"]):
         """
         Note that initializing from hex form is 10 times faster than user-friendly bounceable form
         """
-        self.wc: int = None
-        self.hash_part: bytes = None
-        self.is_bounceable = False
-        self.is_test_only = False
-        self.anycast = None
+        self.wc: int
+        self.hash_part: bytes
+        self.is_bounceable: bool = False
+        self.is_test_only: bool = False
+        self.anycast: typing.Optional[Anycast] = None
 
         if isinstance(address, tuple):
             # Address((-1, b'\x11\x01\xff...'))
@@ -35,7 +35,7 @@ class Address:
             assert isinstance(address[1], bytes), 'expected bytes address hash part'
             self.hash_part = address[1]
             return
-        if isinstance(address, self.__class__):
+        if isinstance(address, Address):
             self.wc = address.wc
             self.hash_part = address.hash_part
             return
@@ -116,7 +116,9 @@ class Address:
     # def __str__(self):
     #     return self.to_str()
 
-    def __eq__(self, other: "Address"):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Address):
+            return NotImplemented
         return self.wc == other.wc and self.hash_part == other.hash_part
 
     def __repr__(self):
@@ -129,15 +131,16 @@ class Address:
 
 
 class ExternalAddress:
-    def __init__(self, address: typing.Union[int, str, bytes, None], length: int = None):
-        if isinstance(address, str):
-            address = bytes.fromhex(address)
-        if isinstance(address, bytes):
-            address = int.from_bytes(address, 'big')
-        if length is None:
-            length = address.bit_length()
-        self.external_address = address
-        self.len = length
+    def __init__(self, address: typing.Union[int, str, bytes, None], length: typing.Optional[int] = None):
+        if address is not None:
+            if isinstance(address, str):
+                address = bytes.fromhex(address)
+            if isinstance(address, bytes):
+                address = int.from_bytes(address, 'big')
+            if length is None:
+                length = address.bit_length()
+        self.external_address: typing.Optional[int] = address
+        self.len: int = length if length is not None else 0
 
     def to_cell(self):
         from .builder import Builder
@@ -149,9 +152,11 @@ class ExternalAddress:
         return b.end_cell()
 
     def __repr__(self):
-        if self.len != 0:
+        if self.external_address is not None:
             return f'ExternalAddress<{hex(self.external_address)}>'
         return f'ExternalAddress<{self.external_address}>'
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ExternalAddress):
+            return NotImplemented
         return self.external_address == other.external_address and self.len == other.len
