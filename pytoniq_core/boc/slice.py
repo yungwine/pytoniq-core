@@ -13,7 +13,7 @@ class SliceError(Exception):
 
 class Slice(NullCell):
 
-    def __init__(self, bits: TvmBitarray, refs: typing.List[Cell], type_: int = -1):
+    def __init__(self, bits: BitarrayLike, refs: typing.List[Cell], type_: int = -1):
         self.bits = bits
         self.refs = refs
         self.type_ = type_
@@ -86,14 +86,14 @@ class Slice(NullCell):
         return bytes_
 
     def preload_address(self) -> typing.Union[Address, ExternalAddress, None]:
-        rem = self.preload_uint(2)
-        if not rem:
+        tag = self.preload_uint(2)
+        if not tag:
             return None
-        if rem == 1:
+        if tag == 1:
             len_ = int(self.preload_bits(11)[2:].to01(), 2)
             addr = int(self.preload_bits(11 + len_)[11:].to01(), 2) if len_ > 0 else None
             return ExternalAddress(addr, len_)
-        if rem != 2:
+        if tag != 2:
             raise SliceError('Unsupported address type')
         if self.preload_uint(3) % 2:
             raise SliceError('Unsupported anycast in preload_address')
@@ -111,26 +111,25 @@ class Slice(NullCell):
             return None
         elif tag == 1:
             len_ = self.load_uint(9)
-            addr = None
+            addr_data = None
             if len_ != 0:
-                addr = self.load_uint(len_)
-            return ExternalAddress(addr, len_)
+                addr_data = self.load_uint(len_)
+            return ExternalAddress(addr_data, len_)
         # todo: addr_var
-        is_anycast = False
+        anycast = None
         if self.load_bool():
-            is_anycast = True
             depth = self.load_uint(5)
             if depth < 1:
                 raise SliceError('Anycast depth must be greater than 0')
-            pfx = self.load_uint(depth)
+            anycast = (depth, self.load_uint(depth))
         if tag == 2:
             wc = self.load_int(8)
             hash_part = self.load_bytes(32)
             addr = Address((wc, hash_part))
         else:
             raise SliceError('Unknown address type')  # todo: addr_var
-        if is_anycast:
-            addr.set_anycast(depth, pfx)
+        if anycast is not None:
+            addr.set_anycast(*anycast)
         return addr
 
     def preload_var_uint(self, bit_length: int) -> int:
@@ -166,7 +165,7 @@ class Slice(NullCell):
         coins = self.preload_bits(4 + length * 8)[4:]
         return ba2int(coins, signed=False)
 
-    def load_coins(self) -> typing.Optional[int]:
+    def load_coins(self) -> int:
         length = self.load_uint(4)
         if not length:
             return 0
@@ -214,36 +213,43 @@ class Slice(NullCell):
         else:
             return None
 
-    def load_hashmap(self, key_length: int, key_deserializer: typing.Callable = None,
-                     value_deserializer: typing.Callable = None):
+    def load_hashmap(self, key_length: int, key_deserializer: typing.Optional[typing.Callable] = None,
+                     value_deserializer: typing.Optional[typing.Callable] = None):
         from .hashmap.hashmap import HashMap
         return HashMap.parse(self, key_length, key_deserializer, value_deserializer)
 
-    def load_hashmap_aug(self, key_length: int, x_deserializer: typing.Callable = None,
-                         y_deserializer: typing.Callable = None):
+    def load_hashmap_aug(self, key_length: int, x_deserializer: typing.Optional[typing.Callable] = None,
+                         y_deserializer: typing.Optional[typing.Callable] = None):
+        if self.is_special():
+            return None
+        if x_deserializer is None or y_deserializer is None:
+            raise SliceError('load_hashmap_aug requires both x_deserializer and y_deserializer')
         from .hashmap.parse import parse_hashmap_aug
         return parse_hashmap_aug(self, key_length, x_deserializer, y_deserializer)
 
-    def load_hashmap_aug_e(self, key_length: int, x_deserializer: typing.Callable = None,
-                           y_deserializer: typing.Callable = None):
+    def load_hashmap_aug_e(self, key_length: int, x_deserializer: typing.Optional[typing.Callable] = None,
+                           y_deserializer: typing.Optional[typing.Callable] = None):
         if self.is_special():
             return self.to_cell()
         if self.load_bit():
+            if x_deserializer is None or y_deserializer is None:
+                raise SliceError('load_hashmap_aug_e requires both x_deserializer and y_deserializer '
+                                 'to parse a non-empty dict')
             from .hashmap.parse import parse_hashmap_aug
             return parse_hashmap_aug(self.load_ref().begin_parse(), key_length, x_deserializer, y_deserializer)
         else:
             return {}, [self]  # extra
 
-    def preload_dict(self, key_length: int, key_deserializer: typing.Callable = None,
-                     value_deserializer: typing.Callable = None):
+    def preload_dict(self, key_length: int, key_deserializer: typing.Optional[typing.Callable] = None,
+                     value_deserializer: typing.Optional[typing.Callable] = None):
         from .hashmap.hashmap import HashMap
         if self.preload_bit():
             return HashMap.parse(self.preload_ref().begin_parse(), key_length, key_deserializer, value_deserializer)
         else:
             return None
 
-    def load_dict(self, key_length: int, key_deserializer: typing.Callable = None,
-                  value_deserializer: typing.Callable = None):
+    def load_dict(self, key_length: int, key_deserializer: typing.Optional[typing.Callable] = None,
+                  value_deserializer: typing.Optional[typing.Callable] = None):
         from .hashmap.hashmap import HashMap
         if self.load_bit():
             return HashMap.parse(self.load_ref().begin_parse(), key_length, key_deserializer, value_deserializer)

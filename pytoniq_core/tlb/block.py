@@ -382,7 +382,7 @@ class ShardStateUnsplit(TlbScheme):
                  min_ref_mc_seqno: int,
                  out_msg_queue_info: Cell,
                  before_split: int,
-                 accounts: "ShardAccounts",
+                 accounts: typing.Union[typing.Tuple[dict, list], Cell, None],
                  overload_history: int,
                  underload_history: int,
                  total_balance: CurrencyCollection,

@@ -25,15 +25,15 @@ class HashMap:
                  key_size: int,
                  key_serializer: typing.Optional[typing.Callable] = None,
                  value_serializer: typing.Optional[typing.Callable] = None,
-                 map_: dict = None,
+                 map_: typing.Optional[dict] = None,
                  ):
 
         self.size = key_size
         if map_ is None:
-            map_: dict = {}
+            map_ = {}
         self.map = map_
-        self.key_serializer: typing.Callable = key_serializer
-        self.value_serializer: typing.Callable = value_serializer
+        self.key_serializer: typing.Optional[typing.Callable] = key_serializer
+        self.value_serializer: typing.Optional[typing.Callable] = value_serializer
 
     def set_int_key(self, int_key: int, value):
         if int_key.bit_length() > self.size:
@@ -62,6 +62,8 @@ class HashMap:
             return self.set_int_key(key, value)
 
         if hash_key:
+            if not isinstance(key, str):
+                raise DictError('hash_key=True requires a string key')
             key = hashlib.sha256(key.encode()).digest()
         if isinstance(key, bytes):
             key = int.from_bytes(key, 'big', signed=False)
@@ -109,8 +111,8 @@ class HashMap:
     @staticmethod
     def parse(dict_cell: Slice,  # Slice
               key_length: int,  # bitlength of keys
-              key_deserializer: typing.Callable = None,  # func to deserialize keys
-              value_deserializer: typing.Callable = None  # func to deserialize values
+              key_deserializer: typing.Optional[typing.Callable] = None,  # func to deserialize keys
+              value_deserializer: typing.Optional[typing.Callable] = None  # func to deserialize values
               ) -> typing.Optional[dict]:
 
         if dict_cell.type_ != CellTypes.ordinary:

@@ -14,6 +14,9 @@ class Crypto:
     magic = b'\xc6\xb4\x13\x48'
     magic_aes = b'\xd4\xad\xbc-'
 
+    ed25519_public: ed25519Public
+    ed25519_private: ed25519Private
+
     def __init__(self):
         raise NotImplementedError
 
@@ -118,7 +121,7 @@ def get_shared_key(private_key: bytes, public_key: bytes) -> bytes:
     :param private_key: client private x25519 key
     :return: ECDH x25519 shared key
     """
-    return x25519.scalar_mult(private_key, public_key)
+    return typing.cast(bytes, x25519.scalar_mult(private_key, public_key))
 
 
 def get_signature(private_key: ed25519Private, message: bytes) -> bytes:

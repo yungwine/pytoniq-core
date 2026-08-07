@@ -119,7 +119,7 @@ def parse_aug(slice: Slice, key_length: int, ret_dict: dict, extras: list, prefi
     deserialize_hashmap_aug_node(slice, m, ret_dict, extras, prefix.copy(), x_deserializer, y_deserializer)
 
 
-def parse_hashmap(dict_cell: Slice, key_len: int) -> typing.Optional[dict]:
+def parse_hashmap(dict_cell: Slice, key_len: int) -> dict:
     result = {}
     parse(dict_cell, key_len, result, bitarray(''))
     return result

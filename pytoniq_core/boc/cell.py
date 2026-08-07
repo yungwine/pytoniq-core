@@ -1,6 +1,8 @@
 import hashlib
 import typing
 
+from bitarray import bitarray
+
 from .deserialize import Boc, NullCell
 from .exotic import LevelMask, CellTypes
 from .tvm_bitarray import TvmBitarray, BitarrayLike
@@ -96,11 +98,7 @@ class Cell(NullCell):
         return self._depths[hash_index]
 
     def get_data_bytes(self) -> bytes:
-        if isinstance(self.bits, TvmBitarray):
-            #  cause we have max size in TvmBitarray
-            result = self.bits.to_bitarray()
-        else:
-            result = self.bits
+        result = bitarray(self.bits)
         if len(result) % 8:
             result.append(1)
             result.fill()
@@ -239,7 +237,7 @@ class Cell(NullCell):
 
         absent = b'\x00' * cells_len
 
-        result = bytearray(b'\xb5\xee\x9cr') + \
+        result: bytearray = bytearray(b'\xb5\xee\x9cr') + \
                  flags + \
                  payload_len.to_bytes(1, 'big') + \
                  cells_num.to_bytes(cells_len, 'big') + \
@@ -289,7 +287,9 @@ class Cell(NullCell):
         """
         return self.refs[ref_i]
 
-    def __eq__(self, other: "Cell") -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Cell):
+            return NotImplemented
         return self._hash == other.hash
 
     def __repr__(self) -> str:

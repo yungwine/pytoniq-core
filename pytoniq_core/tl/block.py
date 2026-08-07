@@ -62,10 +62,12 @@ class BlockIdExt:
     def __repr__(self):
         return f'<TL BlockIdExt [wc={self.workchain}, shard={self.shard}, seqno={self.seqno}, root_hash={self.root_hash.hex()}, file_hash={self.file_hash.hex()}] >'
 
-    def __eq__(self, other: "BlockIdExt"):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, BlockIdExt):
+            return NotImplemented
         if self.seqno != other.seqno or self.workchain != other.workchain or self.shard != other.shard or self.root_hash != other.root_hash or self.file_hash != other.file_hash:
             return False
         return True
 
-    def __hash__(self):
-        return self.root_hash
+    def __hash__(self) -> int:
+        return hash(self.root_hash)

@@ -1,6 +1,5 @@
 import math
 
-# from bitarray import bitarray
 from bitarray.util import int2ba
 
 import typing
@@ -9,7 +8,7 @@ from .address import Address, ExternalAddress
 from .cell import Cell
 from .slice import Slice
 from .deserialize import NullCell, Boc
-from .tvm_bitarray import TvmBitarray
+from .tvm_bitarray import TvmBitarray, BitarrayLike
 
 
 class Builder(NullCell):
@@ -17,16 +16,27 @@ class Builder(NullCell):
     def __init__(self, size: int = 1023, type_: int = -1):
         self._size = size
         self._bits = TvmBitarray(size)
-        self._refs = []
+        self._refs: typing.List[Cell] = []
         self.type_ = type_
 
     @property
     def bits(self):
         return self._bits
 
+    @bits.setter
+    def bits(self, new_bits: BitarrayLike) -> None:
+        if isinstance(new_bits, TvmBitarray):
+            self._bits = new_bits
+        else:
+            self._bits = TvmBitarray(self._size, new_bits)
+
     @property
     def refs(self):
         return self._refs
+
+    @refs.setter
+    def refs(self, new_refs: typing.List[Cell]):
+        self._refs = new_refs
 
     @property
     def size(self):
@@ -35,14 +45,6 @@ class Builder(NullCell):
     @size.setter
     def size(self, new_size: int):
         assert new_size <= 1023, 'builder size cannot be more than 1023 bits'
-
-    @bits.setter
-    def bits(self, new_bits: TvmBitarray):
-        self._bits = new_bits
-
-    @refs.setter
-    def refs(self, new_refs: typing.List[Cell]):
-        self._refs = new_refs
 
     @property
     def used_bits(self) -> int:
@@ -155,10 +157,10 @@ class Builder(NullCell):
         return self.store_bytes(value[:i]).store_ref(Builder().store_snake_bytes(value[i:]).end_cell())
 
     def store_snake_string(self, value: str, need_prefix: bool = False):
-        value = value.encode()
+        byte_str = value.encode()
         if need_prefix:
-            value = b'\x00' + value
-        return self.store_snake_bytes(value)
+            byte_str = b'\x00' + byte_str
+        return self.store_snake_bytes(byte_str)
 
     def store_address(self, address: typing.Union[Address, ExternalAddress, str, None]):
         """
@@ -196,10 +198,16 @@ class Builder(NullCell):
         return cells
 
     @classmethod
-    def one_from_boc(cls, data: typing.Any) -> "Cell":
+    def one_from_boc(cls, data: typing.Any) -> "Builder":
         boc = Boc(data)
         cells = boc.deserialize()
         return cells[0].to_builder()
+
+    def copy(self) -> "Builder":
+        builder = Builder(self._size, self.type_)
+        builder.bits = self._bits.copy()
+        builder.refs = self._refs.copy()
+        return builder
 
     def __repr__(self) -> str:
         return f'<Builder {len(self.bits)}[{self.bits.tobytes().hex().upper()}] -> {len(self.refs)} refs>'

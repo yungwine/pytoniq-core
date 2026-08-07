@@ -97,3 +97,27 @@ def test_empty_ext_addr():
     assert m.info.dest.external_address is None
     assert m.info.dest.len == 0
 
+
+def test_load_hashmap_aug_pruned_branch():
+
+    from pytoniq_core.boc import Builder
+    from pytoniq_core.boc.exotic import CellTypes
+    from pytoniq_core.boc.slice import SliceError
+
+    pruned = (Builder(type_=CellTypes.pruned_branch)
+              .store_uint(CellTypes.pruned_branch, 8)
+              .store_uint(1, 8)
+              .store_bytes(b'\x00' * 32)
+              .store_uint(0, 16)
+              .end_cell())
+
+    assert pruned.begin_parse().is_special()
+
+    # nothing to deserialize behind a pruned branch, with or without deserializers
+    assert pruned.begin_parse().load_hashmap_aug(256) is None
+    assert pruned.begin_parse().load_hashmap_aug(256, lambda cs: cs, lambda cs: cs) is None
+
+    # ordinary cells still require both deserializers
+    ordinary = begin_cell().store_uint(0, 8).end_cell()
+    with pytest.raises(SliceError):
+        ordinary.begin_parse().load_hashmap_aug(256)
