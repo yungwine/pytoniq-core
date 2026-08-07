@@ -1,6 +1,8 @@
 import hashlib
 import typing
 
+from bitarray import bitarray
+
 from .deserialize import Boc, NullCell
 from .exotic import LevelMask, CellTypes
 from .tvm_bitarray import TvmBitarray, BitarrayLike
@@ -96,11 +98,7 @@ class Cell(NullCell):
         return self._depths[hash_index]
 
     def get_data_bytes(self) -> bytes:
-        if isinstance(self.bits, TvmBitarray):
-            #  cause we have max size in TvmBitarray
-            result = self.bits.to_bitarray()
-        else:
-            result = self.bits
+        result = bitarray(self.bits)
         if len(result) % 8:
             result.append(1)
             result.fill()
