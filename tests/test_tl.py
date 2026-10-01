@@ -1,4 +1,7 @@
+import pytest
+
 from pytoniq_core.tl import TlGenerator
+from pytoniq_core.tl.generator import TlError
 
 
 def get_schemas(auto_deser: bool = True):
@@ -74,3 +77,60 @@ def test_adnl_ser():
     assert len_ == len(ser)
 
     assert deser['@type'] == 'overlay.broadcast'
+
+
+def overlay_nodes_with_length(schemas, length: int) -> bytes:
+    raw = bytearray(schemas.serialize('overlay.nodes', {'nodes': []}))
+    raw[4:8] = length.to_bytes(4, 'little')
+    return bytes(raw)
+
+
+def test_vector_longer_than_data_is_rejected():
+    schemas = get_schemas()
+
+    # used to loop 2**31 times appending empty elements until the process ran out of memory
+    with pytest.raises(TlError):
+        schemas.deserialize(overlay_nodes_with_length(schemas, 0x7fffffff))
+    with pytest.raises(TlError):
+        schemas.deserialize(overlay_nodes_with_length(schemas, 3))
+
+
+def test_vectors_still_deserialize():
+    schemas = get_schemas()
+    node = {'id': {'@type': 'pub.ed25519', 'key': '11' * 32}, 'overlay': '22' * 32, 'version': 7,
+            'signature': b'\x33' * 64}
+
+    for nodes in ([], [node], [node, node]):
+        ser = schemas.serialize('overlay.nodes', {'nodes': nodes})
+        deser, len_ = schemas.deserialize(ser)
+
+        assert len_ == len(ser)
+        assert len(deser['nodes']) == len(nodes)
+    assert deser['nodes'][1]['version'] == 7
+
+
+def test_bytes_field_that_is_not_tl_stays_raw():
+    schemas = get_schemas()
+    bogus = overlay_nodes_with_length(schemas, 0x7fffffff)  # random data that happens to start with a TL constructor id
+
+    deser, _ = schemas.deserialize(schemas.serialize('adnl.message.custom', {'data': bogus}))
+
+    assert deser['data'] == bogus
+
+
+def test_unknown_boxed_type_before_vectors_does_not_fail():
+    # a dht.node with an adnl.address.quic address (not in the schemas here) takes the rest of the data as raw bytes,
+    # so the following nodes are read from nothing: that must keep working as before, not raise
+    schemas = get_schemas()
+    node = {'id': {'@type': 'pub.ed25519', 'key': '11' * 32},
+            'addr_list': {'addrs': [{'@type': 'adnl.address.udp', 'ip': 1, 'port': 2}], 'version': 3,
+                          'reinit_date': 3, 'priority': 0, 'expire_at': 0},
+            'version': 3, 'signature': b'\x33' * 64}
+    ser = schemas.serialize('dht.nodes', {'nodes': [node, node]})
+    udp_id = bytes.fromhex('e7a60d67')
+    ser = ser.replace(udp_id, bytes.fromhex('53720178'), 1)  # adnl.address.quic
+
+    deser, _ = schemas.deserialize(ser)
+
+    assert len(deser['nodes']) == 2
+    assert deser['nodes'][0]['id']['key'] == '11' * 32

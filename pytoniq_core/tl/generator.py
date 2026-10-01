@@ -276,19 +276,22 @@ class TlSchemas:
                                  and field in self.untouchables[schema.name])):
                             result[field] = data[i:i + byte_len]
                         else:
-                            temp, j = self.deserialize(data[i:i+byte_len])
-                            if j < byte_len:
-                                while j < byte_len:
-                                    if field not in result:
-                                        result[field] = [temp]
-                                    temp, jj = self.deserialize(data[i + j:i + byte_len])
-                                    j += jj
-                                    if jj == 0:
-                                        result[field] = data[i:i+byte_len]
-                                        break
-                                    result[field].append(temp)
-                            else:
-                                result[field] = temp
+                            try:
+                                temp, j = self.deserialize(data[i:i+byte_len])
+                                if j < byte_len:
+                                    while j < byte_len:
+                                        if field not in result:
+                                            result[field] = [temp]
+                                        temp, jj = self.deserialize(data[i + j:i + byte_len])
+                                        j += jj
+                                        if jj == 0:
+                                            result[field] = data[i:i+byte_len]
+                                            break
+                                        result[field].append(temp)
+                                else:
+                                    result[field] = temp
+                            except TlError:  # not TL after all, e.g. random bytes starting with a known constructor id
+                                result[field] = data[i:i+byte_len]
                         i += byte_len
                         if (byte_len + attach_len) % 4:
                             i += 4 - (byte_len + attach_len) % 4
@@ -302,6 +305,9 @@ class TlSchemas:
                     if 'vector' in type_:
                         length = int.from_bytes(data[i:i + 4], 'little', signed=False)
                         i += 4
+                        # every element takes at least a byte; it can already be past the end
+                        if length > max(len(data) - i, 0):
+                            raise TlError(f'wrong vector length {length}: {len(data) - i} bytes left')
                         result[field] = []
                         for _ in range(length):
                             if sch:
