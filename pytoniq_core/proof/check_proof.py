@@ -119,23 +119,25 @@ def calculate_node_id_short(pub_key: bytes):
     return hashlib.sha256(b'\xc6\xb4\x13H' + pub_key).digest()
 
 
-def check_block_signatures(nodes: typing.List[ValidatorDescr], signatures: typing.List[dict], blk: BlockIdExt):
+def check_block_signatures(nodes: typing.List[ValidatorDescr], signatures: typing.List[dict], blk: BlockIdExt,
+                           to_sign: typing.Optional[bytes] = None):
     node_map: typing.Dict[bytes, ValidatorDescr] = {}
 
     total_weight = 0
     signed_weight = 0
-    i = 0
     for node in nodes:
         total_weight += node.weight
-        i += 1
-
         node_map[calculate_node_id_short(node.public_key.pubkey)] = node
 
-    to_sign = b'pn\x0b\xc5' + blk.root_hash + blk.file_hash  # bytes.fromhex('c50b6e70')[::-1] - magic
-    i = 0
+    if to_sign is None:
+        to_sign = b'pn\x0b\xc5' + blk.root_hash + blk.file_hash  # bytes.fromhex('c50b6e70')[::-1] - magic
+    seen = set()
     for sig in signatures:
-        node = node_map.get(bytes.fromhex(sig['node_id_short']))
-        i += 1
+        node_id = bytes.fromhex(sig['node_id_short'])
+        if node_id in seen:  # a repeated signature must not add weight twice
+            raise ProofError('duplicate node in signature set')
+        seen.add(node_id)
+        node = node_map.get(node_id)
 
         if node is None:
             raise ProofError('cannot find node_id_short in validator list')
@@ -151,6 +153,45 @@ def check_block_signatures(nodes: typing.List[ValidatorDescr], signatures: typin
         return
 
     raise ProofError(f'Block {blk} has not been signed by 2/3 of validators')
+
+
+_tl_schemas = None
+
+
+def _schemas():
+    global _tl_schemas
+    if _tl_schemas is None:
+        import os
+        from ..tl.generator import TlGenerator
+        _tl_schemas = TlGenerator(os.path.join(os.path.dirname(__file__), '..', 'tl', 'schemas')).generate()
+    return _tl_schemas
+
+
+def simplex_signed_data(signature_set: dict, blk: BlockIdExt) -> bytes:
+    """
+    Bytes the validators sign in a liteServer.signatureSet.simplex (Simplex consensus):
+    consensus.dataToSign session_id (consensus.simplex.finalizeVote (consensus.candidateId slot sha256(candidate))).
+    See BlockSignatureSetSimplex::to_sign in ton/crypto/block/signature-set.cpp.
+    """
+    schemas = _schemas()
+    candidate = signature_set['candidate']
+    if BlockIdExt.from_dict(candidate['block']) != blk:
+        raise ProofError('simplex signature set is for another block')
+    candidate_bytes = schemas.serialize(schemas.get_by_name(candidate['@type']), candidate)
+    # int256 fields are passed as hex: the TL serializer reverses raw bytes values
+    candidate_id = {'@type': 'consensus.candidateId', 'slot': signature_set['slot'],
+                    'hash': hashlib.sha256(candidate_bytes).hexdigest()}
+    vote = schemas.serialize(schemas.get_by_name('consensus.simplex.finalizeVote'), {'id': candidate_id})
+    return schemas.serialize(schemas.get_by_name('consensus.dataToSign'),
+                             {'session_id': signature_set['session_id'], 'data': vote})
+
+
+def check_block_signature_set(nodes: typing.List[ValidatorDescr], signature_set: dict, blk: BlockIdExt):
+    """Checks a liteServer.SignatureSet: ordinary (catchain) or simplex."""
+    to_sign = None
+    if signature_set.get('@type') == 'liteServer.signatureSet.simplex':
+        to_sign = simplex_signed_data(signature_set, blk)
+    check_block_signatures(nodes, signature_set['signatures'], blk, to_sign)
 
 
 def compute_validator_set(ccv_conf: CatchainConfig, blk: BlockIdExt, vset: ValidatorSet, cc_seqno: typing.Optional[int] = None):
