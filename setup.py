@@ -29,7 +29,6 @@ setuptools.setup(
         "pycryptodomex>=3.18.0",
         "bitarray>=2.6.0",
         "requests>=2.31.0",
-        "x25519>=0.0.2",
         "setuptools>=65.5.1",
         "PyNaCl>=1.5.0"
     ]
