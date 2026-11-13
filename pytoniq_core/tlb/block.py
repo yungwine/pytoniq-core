@@ -170,6 +170,8 @@ class BlkMasterInfo(TlbScheme):
 
     @classmethod
     def deserialize(cls, cell_slice: Slice):
+        if cell_slice.is_special():
+            return None
         return cls(ExtBlkRef.deserialize(cell_slice))
 
 
@@ -191,6 +193,8 @@ class BlkPrevInfo(TlbScheme):
 
     @classmethod
     def deserialize(cls, cell_slice: Slice, after_merge: int):
+        if cell_slice.is_special():
+            return None
         kwargs = {}
         if not after_merge:
             type_ = 'prev_blk_info'
