@@ -1,1 +1,1 @@
-from .check_proof import ProofError, check_proof, check_block_header_proof, check_shard_proof, check_account_proof, check_block_signatures, compute_validator_set, calculate_node_id_short
+from .check_proof import ProofError, check_proof, check_block_header_proof, check_shard_proof, check_account_proof, check_block_signatures, check_block_signature_set, compute_validator_set, calculate_node_id_short
