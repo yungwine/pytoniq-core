@@ -1,7 +1,5 @@
-import typing
-
 import hashlib
-import x25519
+from nacl.bindings import crypto_scalarmult
 
 from nacl.signing import SigningKey as ed25519Private, VerifyKey as ed25519Public
 from nacl.public import PublicKey as x25519Public, PrivateKey as x25519Private
@@ -121,7 +119,7 @@ def get_shared_key(private_key: bytes, public_key: bytes) -> bytes:
     :param private_key: client private x25519 key
     :return: ECDH x25519 shared key
     """
-    return typing.cast(bytes, x25519.scalar_mult(private_key, public_key))
+    return crypto_scalarmult(private_key, public_key)
 
 
 def get_signature(private_key: ed25519Private, message: bytes) -> bytes:
